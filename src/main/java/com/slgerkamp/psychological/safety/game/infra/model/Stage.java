@@ -18,10 +18,10 @@ import java.sql.Timestamp;
 public class Stage {
 
     @Id
-    public Long id;
+    public String id;
     public String password;
     public String name;
+    public String status;
     public Timestamp createDate;
     public Timestamp updateDate;
-
 }

@@ -17,7 +17,7 @@ public class Round {
 
     @Id
     public Integer id;
-    public Long stageId;
+    public String stageId;
     public Integer currentTurnNumber;
     public String theme;
 }

@@ -1,6 +1,13 @@
 package com.slgerkamp.psychological.safety.game.infra.model;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
 
 public interface StageRepository extends JpaRepository<Stage, Integer> {
+
+    @Query("SELECT u FROM Stage u WHERE u.status = 'participants_wanted' ORDER BY u.createDate DESC")
+    List<Stage> findParticipantsWantedStageList(Pageable pageable);
 }

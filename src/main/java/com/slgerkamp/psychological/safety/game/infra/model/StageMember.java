@@ -1,6 +1,7 @@
 package com.slgerkamp.psychological.safety.game.infra.model;
 
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.Table;
 
 import lombok.AllArgsConstructor;
@@ -12,11 +13,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name="stage-member")
+@Table(name="stage_member")
 public class StageMember {
 
-    public Long stageId;
-    public Integer stageNumber;
+    @Id
+    public String stageId;
     public String userId;
     public String userName;
 }
