@@ -2,5 +2,9 @@ package com.slgerkamp.psychological.safety.game.infra.model;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface RoundRepository extends JpaRepository<Round, Integer> {
+import java.util.List;
+
+public interface RoundRepository extends JpaRepository<Round, String> {
+    
+    List<Round> findByStageIdOrderByCreateDateDesc(String stageId);
 }

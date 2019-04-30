@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.sql.Timestamp;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,8 +18,10 @@ import lombok.NoArgsConstructor;
 public class Round {
 
     @Id
-    public Integer id;
+    public String id;
     public String stageId;
+    public Integer currentRoundNumber;
     public Integer currentTurnNumber;
-    public String theme;
+    public String status;
+    public Timestamp createDate;
 }

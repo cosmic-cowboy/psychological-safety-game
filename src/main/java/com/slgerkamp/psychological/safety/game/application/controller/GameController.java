@@ -6,10 +6,13 @@ import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
+import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
+import com.slgerkamp.psychological.safety.game.infra.model.StageMember;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @LineMessageHandler
 public class GameController {
@@ -19,31 +22,26 @@ public class GameController {
     @Autowired
     private StageService stageService;
 
-    @Autowired
-    private RoundService roundService;
-
-    @Autowired
-    private UserService userService;
-
-
     @EventMapping
     public void handleTextMessageEvent(MessageEvent<TextMessageContent> event) {
 
         final String userId = event.getSource().getUserId();
         final String message = event.getMessage().getText();
-        final UserStatus userStatus = userService.userStatus(userId);
 
-        switch (userStatus) {
-            case APPLY_TO_JOIN:
-                stageService.confirmPasswordToJoinAStage(userId, message);
-                break;
+        final Optional<StageMember> optionalStageMember = stageService.getStageMember(userId);
 
-            case JOINING:
-                roundService.setFeelings(userId, message);
-                break;
-
-            default:
-                break;
+        if (optionalStageMember.isPresent()) {
+            StageMemberStatus stageMemberStatus =
+                    StageMemberStatus.valueOf(optionalStageMember.get().status);
+            switch (stageMemberStatus) {
+                case APPLY_TO_JOIN :
+                    stageService.confirmPasswordToJoinAStage(userId, message);
+                    break;
+                case JOINING:
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -55,7 +53,8 @@ public class GameController {
 
         if (map.containsKey(PostBackKeyName.ACTION.keyName)) {
             final PostBackAction postBackAction = PostBackAction.valueOf(map.get(PostBackKeyName.ACTION.keyName));
-            log.debug("postback action : " + postBackAction.actionName);
+            log.debug("postback action : " + postBackAction.name());
+
             switch (postBackAction) {
                 case CREATE:
                     stageService.createStage(userId);
@@ -66,20 +65,33 @@ public class GameController {
                     break;
 
                 case REQUEST_TO_JOIN_STAGE:
-                    String stageId = map.get(PostBackKeyName.STAGE.keyName);
-                    stageService.selectStageToJoin(userId,stageId);
+                    String stageId_REQUEST_TO_JOIN_STAGE = map.get(PostBackKeyName.STAGE.keyName);
+                    stageService.requestToJoinStage(userId, stageId_REQUEST_TO_JOIN_STAGE);
                     break;
 
-                case REQUEST_TO_START_ROUND:
-                    roundService.requestToStartRound(userId);
+                case REQUEST_TO_START_STAGE:
+                    stageService.requestToStartStage(userId);
                     break;
 
-                case CONFIRM_TO_START_ROUND:
-                    roundService.confirmToStartRound(userId);
+                case CONFIRM_TO_START_STAGE:
+                    String stageId_CONFIRM_TO_START_ROUND = map.get(PostBackKeyName.STAGE.keyName);
+                    stageService.confirmToStartStage(userId, stageId_CONFIRM_TO_START_ROUND);
                     break;
 
                 case SET_ROUND_CARD:
-                    roundService.setRoundCard(userId);
+                    String stageId = map.get(PostBackKeyName.STAGE.keyName);
+                    String roundId = map.get(PostBackKeyName.ROUND.keyName);
+                    String cardId = map.get(PostBackKeyName.CARD.keyName);
+                    stageService.setRoundCard(userId, roundId, cardId);
+                    break;
+
+                case REQUEST_TO_FINISH_STAGE:
+                    stageService.requestToFinishStage(userId);
+                    break;
+
+                case CONFIRM_TO_FINISH_STAGE:
+                    String stageId_CONFIRM_TO_FINISH_ROUND = map.get(PostBackKeyName.STAGE.keyName);
+                    stageService.confirmToFinishStage(userId, stageId_CONFIRM_TO_FINISH_ROUND);
                     break;
 
                 default:

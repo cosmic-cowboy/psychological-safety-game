@@ -6,8 +6,9 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
-public interface StageRepository extends JpaRepository<Stage, Integer> {
+public interface StageRepository extends JpaRepository<Stage, String> {
 
-    @Query("SELECT u FROM Stage u WHERE u.status = 'participants_wanted' ORDER BY u.createDate DESC")
+    @Query("SELECT u FROM Stage u WHERE u.status = 'PARTICIPANTS_WANTED' ORDER BY u.createDate DESC")
     List<Stage> findParticipantsWantedStageList(Pageable pageable);
+
 }

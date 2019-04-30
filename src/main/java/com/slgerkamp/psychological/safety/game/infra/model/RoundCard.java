@@ -1,12 +1,12 @@
 package com.slgerkamp.psychological.safety.game.infra.model;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.sql.Timestamp;
 
 @Data
 @NoArgsConstructor
@@ -16,8 +16,11 @@ import lombok.NoArgsConstructor;
 public class RoundCard {
 
     @Id
-    public Integer roundId;
+    public String id;
+    public String roundId;
     public Integer turnNumber;
+    public String userId;
     public String cardId;
     public String word;
+    public Timestamp createDate;
 }

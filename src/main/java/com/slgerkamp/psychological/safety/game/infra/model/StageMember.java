@@ -1,8 +1,6 @@
 package com.slgerkamp.psychological.safety.game.infra.model;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,7 +15,10 @@ import lombok.NoArgsConstructor;
 public class StageMember {
 
     @Id
+    public String id;
     public String stageId;
     public String userId;
     public String userName;
+    public String status;
+    public Integer turnNumber;
 }
