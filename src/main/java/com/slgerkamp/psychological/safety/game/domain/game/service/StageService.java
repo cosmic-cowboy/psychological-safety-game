@@ -56,9 +56,10 @@ public class StageService {
             addMember(userId, result_stage.id);
 
             // send password to creator
+            final String url = "https://psychological-safety-game.herokuapp.com/stage/" + result_stage.id;
             String msg = messageSource.getMessage(
                     "bot.stage.create.success",
-                    new Object[]{result_stage.id, result_stage.password},
+                    new Object[]{result_stage.id, result_stage.password, url},
                     Locale.JAPANESE);
             lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(new TextMessage(msg)));
         }
@@ -127,12 +128,13 @@ public class StageService {
                         Stage stage = optionalStage.get();
                         if (stage.password.equals(password)) {
                             addMember(userId, stage.id);
-                            final String wrongPassword = messageSource.getMessage(
+                            final String url = "https://psychological-safety-game.herokuapp.com/stage/" + stage.id;
+                            final String correctPassword = messageSource.getMessage(
                                     "bot.stage.input.password.correct.password",
-                                    new Object[]{stage.id},
+                                    new Object[]{stage.id, url},
                                     Locale.JAPANESE);
                             lineMessage.multicast(Collections.singleton(userId),
-                                    Collections.singletonList(new TextMessage(wrongPassword)));
+                                    Collections.singletonList(new TextMessage(correctPassword)));
                         } else {
                             final String wrongPassword = messageSource.getMessage(
                                     "bot.stage.input.password.wrong.password",
@@ -277,7 +279,8 @@ public class StageService {
     public void setRoundCard(String userId, Long roundId, String cardId) {
         // check current turn
         Optional<Round> optionalRound = roundRepository.findById(roundId);
-        List<StageMember> userStageMemberList = stageMemberRepository.findByUserId(userId);
+        List<StageMember> userStageMemberList =
+                stageMemberRepository.findByUserIdAndStatus(userId, StageMemberStatus.JOINING.name());
 
         if (optionalRound.isPresent() && userStageMemberList.size() > 0) {
             StageMember userStageMember = userStageMemberList.get(0);
@@ -364,15 +367,6 @@ public class StageService {
         }
     }
 
-    public Optional<StageMember> getStageMember(String userId) {
-        Optional<StageMember> optionalStageMember = Optional.empty();
-        List<StageMember> stageMemberList = stageMemberRepository.findByUserId(userId);
-        if (stageMemberList.size() > 0) {
-            optionalStageMember = Optional.of(stageMemberList.get(0));
-        }
-        return optionalStageMember;
-    }
-
     public void requestToFinishStage(String userId) {
         List<StageMember> userStageMemberList =
                 stageMemberRepository.findByUserIdAndStatus(userId, StageMemberStatus.JOINING.name());
@@ -451,16 +445,65 @@ public class StageService {
         }
     }
 
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+///////////////////  public method  //////////////////////
+//////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
 
-    public List<RoundCard> getRoundCards(String stageId) {
+    public Stage getStage(String stageId) {
+        Optional<Stage> optionalStage = stageRepository.findById(stageId);
+        return optionalStage.get();
+    }
+
+    public Long getMillSecondOfLatestRoundCard(String stageId){
+        Long millSecondOfLatestRoundCard = Long.valueOf(0);
+
         List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
-        List<RoundCard> result = new ArrayList<>();
+        if (roundList.size() > 0) {
+            List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
+            Optional<RoundCard> optionalRoundCard =
+                    roundCardRepository.findFirstByRoundIdInOrderByCreateDateDesc(roundIdList);
+            if (optionalRoundCard.isPresent()) {
+                millSecondOfLatestRoundCard = optionalRoundCard.get().createDate.getTime();
+                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestRoundCard);
+            }
+        }
+        return millSecondOfLatestRoundCard;
+    }
+
+    public Map<Long, List<RoundCard>> getRoundCards(String stageId) {
+        List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
+        Map<Long, List<RoundCard>> roundCardMap = new TreeMap<>();
+
         if (roundList.size() > 0) {
             List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
             List<RoundCard> roundCardList = roundCardRepository.findByRoundIdIn(roundIdList);
+            Map<Long, List<RoundCard>> hashRoundCardMap =
+                    roundCardList.stream().collect(Collectors.groupingBy(r -> r.roundId));
+            log.debug("hashRoundCardMap : " + hashRoundCardMap);
+            roundCardMap = new TreeMap<>(hashRoundCardMap);
 
         }
-        return result;
+        log.debug("roundCardMap : " + roundCardMap);
+        return roundCardMap;
+    }
+
+    public List<StageMember> getStageMemberForStage(String stageId) {
+        List<StageMember> stageMemberList = stageMemberRepository.findByStageId(stageId);
+        return stageMemberList;
+    }
+
+    public Optional<StageMember> getStageMemberForEachUser(String userId) {
+        Optional<StageMember> optionalStageMember = Optional.empty();
+        List<String> statusList = Arrays.asList(
+                StageMemberStatus.APPLY_TO_JOIN.name(),
+                StageMemberStatus.JOINING.name());
+        List<StageMember> stageMemberList = stageMemberRepository.findByUserIdAndStatusIn(userId, statusList);
+        if (stageMemberList.size() > 0) {
+            optionalStageMember = Optional.of(stageMemberList.get(0));
+        }
+        return optionalStageMember;
     }
 
 //////////////////////////////////////////////////////////
@@ -631,16 +674,21 @@ public class StageService {
         finishAllRounds(stageId);
         final Optional<Stage> optionalStage = stageRepository.findById(stageId);
         if (optionalStage.isPresent()) {
-            List<StageMember> stageMemberList = stageMemberRepository.findByStageId(stageId);
-            Set<String> memberSet = stageMemberList.stream().map(s -> s.userId).collect(Collectors.toSet());
 
             Stage currentStage = optionalStage.get();
-
             currentStage.status = StageStatus.END_GAME.name();
             stageRepository.save(currentStage);
-            stageMemberRepository.deleteByStageId(stageId);
+
+            List<StageMember> stageMemberList = stageMemberRepository.findByStageId(stageId);
+            List<StageMember> terminatedStageMemberList = new ArrayList<>();
+            for (StageMember stageMember : stageMemberList) {
+                stageMember.status = StageMemberStatus.TERMINATED.name();
+                terminatedStageMemberList.add(stageMember);
+            }
+            stageMemberRepository.saveAll(terminatedStageMemberList);
             stageUserCardRepository.deleteByStageId(stageId);
 
+            Set<String> memberSet = stageMemberList.stream().map(s -> s.userId).collect(Collectors.toSet());
             final String successMessage = messageSource.getMessage(
                     "bot.stage.end.confirm.success",
                     null,
@@ -715,9 +763,12 @@ public class StageService {
     }
 
     private void addMember_doNotCallDirectly(final String userId, final String stageId, final String status) {
-        final Optional<StageMember> optionalStageMember = getStageMember(userId);
+        final Optional<StageMember> optionalStageMember = getStageMemberForEachUser(userId);
         if (optionalStageMember.isPresent()) {
-            stageMemberRepository.deleteByUserId(userId);
+            List<String> statusList = Arrays.asList(
+                    StageMemberStatus.APPLY_TO_JOIN.name(),
+                    StageMemberStatus.JOINING.name());
+            stageMemberRepository.deleteByUserIdAndStatusIn(userId, statusList);
         }
 
         final UserProfileResponse userProfileResponse = lineMessage.getProfile(userId);
@@ -726,6 +777,7 @@ public class StageService {
         stageMember.stageId = stageId;
         stageMember.userId = userProfileResponse.getUserId();
         stageMember.userName = userProfileResponse.getDisplayName();
+        stageMember.pictureUrl = userProfileResponse.getPictureUrl();
         stageMember.status = status;
         stageMemberRepository.save(stageMember);
     }

@@ -19,6 +19,7 @@ public class StageMember {
     public String stageId;
     public String userId;
     public String userName;
+    public String pictureUrl;
     public String status;
     public Integer turnNumber;
 }

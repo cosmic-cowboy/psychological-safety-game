@@ -28,7 +28,7 @@ public class GameController {
         final String userId = event.getSource().getUserId();
         final String message = event.getMessage().getText();
 
-        final Optional<StageMember> optionalStageMember = stageService.getStageMember(userId);
+        final Optional<StageMember> optionalStageMember = stageService.getStageMemberForEachUser(userId);
 
         if (optionalStageMember.isPresent()) {
             StageMemberStatus stageMemberStatus =

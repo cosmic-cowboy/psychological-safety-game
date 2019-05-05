@@ -1,5 +1,6 @@
 package com.slgerkamp.psychological.safety.game.infra.model;
 
+import com.slgerkamp.psychological.safety.game.domain.game.StageMemberStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,12 +12,12 @@ public interface StageMemberRepository extends JpaRepository<StageMember, String
 
     List<StageMember> findByUserIdAndStatusAndStageId(String userId, String status, String stageId);
 
-    List<StageMember> findByUserId(String userId);
+    List<StageMember> findByUserIdAndStatusIn(String userId, List<String> statusList);
 
     List<StageMember> findByStageId(String stageId);
 
     @Transactional
-    void deleteByUserId(String userId);
+    void deleteByUserIdAndStatusIn(String userId, List<String> statusList);
 
     @Transactional
     void deleteByStageId(String stageId);
