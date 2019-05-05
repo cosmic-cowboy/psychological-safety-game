@@ -1,7 +1,6 @@
 package com.slgerkamp.psychological.safety.game.domain.game.service;
 
 import com.linecorp.bot.model.action.PostbackAction;
-import com.linecorp.bot.model.message.ImagemapMessage;
 import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.message.template.*;
@@ -275,7 +274,7 @@ public class StageService {
         }
     }
 
-    public void setRoundCard(String userId, String roundId, String cardId) {
+    public void setRoundCard(String userId, Long roundId, String cardId) {
         // check current turn
         Optional<Round> optionalRound = roundRepository.findById(roundId);
         List<StageMember> userStageMemberList = stageMemberRepository.findByUserId(userId);
@@ -452,6 +451,18 @@ public class StageService {
         }
     }
 
+
+    public List<RoundCard> getRoundCards(String stageId) {
+        List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
+        List<RoundCard> result = new ArrayList<>();
+        if (roundList.size() > 0) {
+            List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
+            List<RoundCard> roundCardList = roundCardRepository.findByRoundIdIn(roundIdList);
+
+        }
+        return result;
+    }
+
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 ///////////////////////  round  //////////////////////////
@@ -472,14 +483,14 @@ public class StageService {
         } else {
 
             final Round round = new Round();
-            round.id = CommonUtils.getUUID();
+            round.id = System.currentTimeMillis();
             round.stageId = stageId;
             round.status = RoundStatus.ON_GOING.name();
             round.currentRoundNumber = roundList.size();
             round.currentTurnNumber = roundList.size();
             round.createDate = Timestamp.valueOf(LocalDateTime.now());
             final Round resultRound = roundRepository.save(round);
-            final String roundId = resultRound.id;
+            final Long roundId = resultRound.id;
 
             // send round cards
             List<StageUserCard> stageUserCardList = stageUserCardRepository.findByStageId(stageId);
@@ -506,7 +517,7 @@ public class StageService {
                     .get();
             List<String> situationList = Cards.getTypeList("situation");
             // get situation cards someone already sent
-            List<String> roundIds = roundList.stream().map(r -> r.id).collect(Collectors.toList());
+            List<Long> roundIds = roundList.stream().map(r -> r.id).collect(Collectors.toList());
             List<String> roundCardListForSituation =
                     roundCardRepository
                             .findByRoundIdInAndCardIdStartingWith(roundIds, "SITUATION")
@@ -543,7 +554,7 @@ public class StageService {
         }
     }
 
-    private void createCard(String stageId, String roundId, List<String> cardList, String userId) {
+    private void createCard(String stageId, Long roundId, List<String> cardList, String userId) {
         final String postbackLabel = messageSource.getMessage(
                 "bot.round.user.cards.image.label",
                 null,

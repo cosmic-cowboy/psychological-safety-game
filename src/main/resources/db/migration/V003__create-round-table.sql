@@ -1,5 +1,5 @@
 CREATE TABLE round (
-  id                   VARCHAR PRIMARY KEY,
+  id                   BIGINT PRIMARY KEY,
   stage_id             VARCHAR NOT NULL,
   current_round_number INTEGER NOT NULL,
   current_turn_number  INTEGER NOT NULL,

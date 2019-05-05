@@ -17,7 +17,7 @@ public class RoundCard {
 
     @Id
     public String id;
-    public String roundId;
+    public Long roundId;
     public Integer turnNumber;
     public String userId;
     public String cardId;

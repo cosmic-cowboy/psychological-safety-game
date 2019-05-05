@@ -6,5 +6,7 @@ import java.util.List;
 
 public interface RoundCardRepository extends JpaRepository<RoundCard, String> {
 
-    List<RoundCard> findByRoundIdInAndCardIdStartingWith(List<String> roundIds, String cardId);
+    List<RoundCard> findByRoundIdInAndCardIdStartingWith(List<Long> roundIds, String cardId);
+
+    List<RoundCard> findByRoundIdIn(List<Long> roundIds);
 }

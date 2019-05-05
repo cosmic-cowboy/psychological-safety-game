@@ -82,7 +82,7 @@ public class GameController {
                     String stageId = map.get(PostBackKeyName.STAGE.keyName);
                     String roundId = map.get(PostBackKeyName.ROUND.keyName);
                     String cardId = map.get(PostBackKeyName.CARD.keyName);
-                    stageService.setRoundCard(userId, roundId, cardId);
+                    stageService.setRoundCard(userId, Long.parseLong(roundId), cardId);
                     break;
 
                 case REQUEST_TO_FINISH_STAGE:
