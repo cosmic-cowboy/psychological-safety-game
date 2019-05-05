@@ -10,6 +10,9 @@ spring:
           use_jdbc_metadata_defaults : false
   messages:
     basename: "i18n/messages"
+  thymeleaf:
+    mode : HTML
+
 logging:
   level:
     com:
