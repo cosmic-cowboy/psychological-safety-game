@@ -43,16 +43,23 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 }
 
 .content-list {
-    margin-top: 1.5rem;
+}
+
+.content-list-head {
+    margin-top: 30px;
 }
 
 .content-list-body {
     background: #e9ecef;
-    padding-top: 20px;
-    padding-bottom: 30px;
+    padding-top: 30px;
+    padding-bottom: 20px;
     border-radius: .5rem!important;
+    margin-bottom: 10px;
 }
 
+.line-height-2 {
+    line-height: 2;
+}
 
 .d-flex {
     display: flex !important;

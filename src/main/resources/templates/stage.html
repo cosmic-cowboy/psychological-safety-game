@@ -12,7 +12,7 @@
         <!-- Image and text -->
         <nav class="navbar navbar-light bg-white">
             <a class="navbar-brand" href="#">
-                <img src="/docs/4.3/assets/brand/bootstrap-solid.svg" width="30" height="30" class="d-inline-block align-top" alt="">
+<!--                <img src="/docs/4.3/assets/brand/bootstrap-solid.svg" width="30" height="30" class="d-inline-block align-top" alt="">-->
                 Psychological Safety Game
             </a>
         </nav>
@@ -20,7 +20,68 @@
             <div class="row justify-content-center">
                 <div class="col-lg-11 col-xl-10">
                     <div class="page-header">
-                        <h1 th:text="${stageTitle}"></h1>
+                        <div id="stageIntroduction" th:if="${stageNotStartedYet}" class="page-content">
+                            <h1 class="text-center" th:text="#{web.stage.participate.step}"></h1>
+                            <div class="content-list">
+                                <div class="content-list-head row">
+                                    <h3>STEP 1</h3>
+                                </div>
+                                <div class="content-list-body row">
+                                    <div class="col-lg-3">
+                                        <p class="text-center">
+                                            <img width="150px" class="img-fluid" alt="url qr code" th:src="${stageQRcode}" />
+                                        </p>
+                                    </div>
+                                    <div class="col-lg-9 lead line-height-2">
+                                        <p th:text="#{web.stage.participate.step.1}"></p>
+                                    </div>
+                                </div>
+
+                                <div class="content-list-head row">
+                                    <h3>STEP 2</h3>
+                                </div>
+                                <div class="content-list-body row">
+                                    <div class="col-lg-3">
+                                        <h2 class="font-weight-bold text-center" th:text="${stagePassword}"></h2>
+                                    </div>
+                                    <div class="col-lg-9 lead line-height-2">
+                                        <p th:text="#{web.stage.participate.step.2}"></p>
+                                    </div>
+                                </div>
+
+                                <div class="content-list-head row">
+                                    <h3>STEP 3</h3>
+                                </div>
+                                <div class="content-list-body row">
+                                    <div class="col-lg-3">
+                                        <p class="text-center">
+
+                                        </p>
+                                    </div>
+                                    <div class="col-lg-9 lead line-height-2">
+                                        <p th:text="#{web.stage.participate.step.3}"></p>
+                                    </div>
+                                </div>
+
+                                <div class="content-list-head row">
+                                    <h3>Note</h3>
+                                </div>
+                                <div class="content-list-body row">
+                                    <div class="col-lg-3">
+                                        <p class="text-center">
+                                            <img width="150px" class="img-fluid" alt="bot qr code" src="../img/bot-qrcode.jpg" />
+                                        </p>
+                                    </div>
+                                    <div class="col-lg-9 lead line-height-2">
+                                        <p th:text="#{web.stage.participate.step.caution}"></p>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    <h4 class="text-center" th:text="${stageTitle}"></h4>
+                    </div>
                         <div class="d-flex align-items-center">
                             <ul class="avatars">
                                 <li th:each="stageMember : ${stageMemberList}">
@@ -35,9 +96,9 @@
                     <div class="page-content">
                         <div th:each="entry : ${roundCardMap}" th:title="${entry.key}" class="content-list">
                             <div class="content-list-head row">
-                                <h3 th:text="|Round : ${entryStat.count}|"></h3>
+                                <h3 th:text="'Round : ' + (${entryStat.size} - ${entryStat.index})"></h3>
                             </div>
-                            <div class="content-list-body row justify-content-center">
+                            <div class="content-list-body row">
                                 <div th:each="roundCard : ${entry.value}" class="col-lg-3">
                                     <img th:src="|https://psychological-safety-game.herokuapp.com/cards/${roundCard.cardId}.jpg|" th:alt="${roundCard.cardId}" class="rounded round-card-img">
                                     <div class="media media-member">

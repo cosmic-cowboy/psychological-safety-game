@@ -57,7 +57,7 @@ public class GameController {
 
             switch (postBackAction) {
                 case CREATE:
-                    stageService.createStage(userId);
+                    stageService.createStageTable(userId);
                     break;
 
                 case GET_STAGES:

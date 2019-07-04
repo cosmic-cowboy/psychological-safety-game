@@ -1,6 +1,7 @@
 package com.slgerkamp.psychological.safety.game.domain.game.service;
 
 import com.linecorp.bot.model.action.PostbackAction;
+import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.message.template.*;
@@ -10,9 +11,11 @@ import com.slgerkamp.psychological.safety.game.domain.game.*;
 import com.slgerkamp.psychological.safety.game.infra.message.LineMessage;
 import com.slgerkamp.psychological.safety.game.infra.model.*;
 import com.slgerkamp.psychological.safety.game.infra.utils.CommonUtils;
+import com.slgerkamp.psychological.safety.game.infra.utils.QrCodeGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
@@ -25,12 +28,12 @@ public class StageService {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GameController.class);
 
+
     @Autowired
     private StageRepository stageRepository;
 
     @Autowired
     private StageMemberRepository stageMemberRepository;
-
 
     @Autowired
     private RoundRepository roundRepository;
@@ -47,21 +50,26 @@ public class StageService {
     @Autowired
     private MessageSource messageSource;
 
-    public void createStage(String userId) {
+    @Autowired
+    private QrCodeGenerator qrCodeGenerator;
+
+    public void createStageTable(String userId) {
         // check whether sender already join a stage or not
         if (!userAlreadyJoinedStage(userId)) {
 
-            final Stage result_stage = createStage();
+            final Stage result_stage = createStageTable();
 
             addMember(userId, result_stage.id);
 
+            final String url = CommonUtils.createStageUrl(result_stage.id);
+
+            qrCodeGenerator.create(url, result_stage.id);
             // send password to creator
-            final String url = "https://psychological-safety-game.herokuapp.com/stage/" + result_stage.id;
-            String msg = messageSource.getMessage(
+            String msg_1 = messageSource.getMessage(
                     "bot.stage.create.success",
-                    new Object[]{result_stage.id, result_stage.password, url},
+                    new Object[]{url},
                     Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(new TextMessage(msg)));
+            lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(new TextMessage(msg_1)));
         }
     }
 
@@ -86,6 +94,22 @@ public class StageService {
         }
     }
 
+    public Boolean requestToJoinStageForWeb(String stageId, final OAuth2Authentication oAuth2Authentication, String password) {
+        Boolean isSuccess = false;
+        // already checked whether sender already join a stage or not
+
+        // fetch stagesParticipantsWanted
+        Optional<Stage> optionalStage = getParticipantsWantedStage(stageId);
+        if (optionalStage.isPresent()) {
+            Stage stage = optionalStage.get();
+            if (stage.password.equals(password)) {
+                addMemberAndSendMessageToMemberFromWeb(oAuth2Authentication, stage);
+                isSuccess = true;
+            }
+        }
+        return isSuccess;
+    }
+
     public void requestToJoinStage(String userId, String stageId) {
         // check whether sender already join a stage or not
         if (!userAlreadyJoinedStage(userId)) {
@@ -95,12 +119,12 @@ public class StageService {
 
             if (optionalStage.isPresent()) {
                 addTempMember(userId, stageId);
-                final String alreadyJoined = messageSource.getMessage(
+                final String joinConfirm = messageSource.getMessage(
                         "bot.stage.join.confirm",
                         new Object[]{stageId},
                         Locale.JAPANESE);
                 lineMessage.multicast(Collections.singleton(userId),
-                        Collections.singletonList(new TextMessage(alreadyJoined)));
+                        Collections.singletonList(new TextMessage(joinConfirm)));
             } else {
                 final String cannotJoinForSomeReason = messageSource.getMessage(
                         "bot.stage.join.confirm.error",
@@ -127,14 +151,7 @@ public class StageService {
                     if (optionalStage.isPresent()) {
                         Stage stage = optionalStage.get();
                         if (stage.password.equals(password)) {
-                            addMember(userId, stage.id);
-                            final String url = "https://psychological-safety-game.herokuapp.com/stage/" + stage.id;
-                            final String correctPassword = messageSource.getMessage(
-                                    "bot.stage.input.password.correct.password",
-                                    new Object[]{stage.id, url},
-                                    Locale.JAPANESE);
-                            lineMessage.multicast(Collections.singleton(userId),
-                                    Collections.singletonList(new TextMessage(correctPassword)));
+                            addMemberAndSendMessageToMember(userId, stage);
                         } else {
                             final String wrongPassword = messageSource.getMessage(
                                     "bot.stage.input.password.wrong.password",
@@ -220,15 +237,41 @@ public class StageService {
         if (userStageMemberList.size() > 0
                 && optionalStage.isPresent()
                 && optionalStage.get().status.equals(StageStatus.PARTICIPANTS_WANTED.name())) {
-            Stage currentStage = optionalStage.get();
-            currentStage.status = StageStatus.START_GAME.name();
-            stageRepository.save(currentStage);
 
-            // set turn_number for this stage
-            // set cards for this stage
+            // check everyone is friend with bot
             List<StageMember> stageMemberList = stageMemberRepository.findByStageId(stageId);
+            List<String> notFriendWithBotMemberList = new ArrayList<>();
+            for (StageMember s : stageMemberList) {
+                log.debug("confirmToStartStage start 心理的安全性ゲームBot");
+                try {
+                    lineMessage.getProfile(s.userId);
+                } catch (RuntimeException ex) {
+                    log.debug("confirmToStartStage RuntimeException 心理的安全性ゲームBot");
+                    notFriendWithBotMemberList.add(s.userName);
+                }
+            }
+            if (notFriendWithBotMemberList.size() > 0) {
+                log.debug("notFriendWithBotMemberList : " + notFriendWithBotMemberList);
+
+                String notFriendWithBotMember = String.join("," , notFriendWithBotMemberList);
+                final String notFriendWithBotMessage = messageSource.getMessage(
+                        "bot.stage.start.confirm.error.notFriendWithBot",
+                        new Object[]{notFriendWithBotMember},
+                        Locale.JAPANESE);
+                lineMessage.multicast(Collections.singleton(userId),
+                        Collections.singletonList(new TextMessage(notFriendWithBotMessage)));
+                return;
+            }
+
             Collections.shuffle(stageMemberList);
 
+            // change stage status
+            Stage currentStage = optionalStage.get();
+            currentStage.status = StageStatus.START_GAME.name();
+            currentStage.updateDate = Timestamp.valueOf(LocalDateTime.now());
+            stageRepository.save(currentStage);
+
+            // set cards for this stage
             List<String> commentsCards = Cards.getTypeList("comment");
             List<String> optionCards = Cards.getTypeList("option");
             Collections.shuffle(commentsCards);
@@ -456,8 +499,8 @@ public class StageService {
         return optionalStage.get();
     }
 
-    public Long getMillSecondOfLatestRoundCard(String stageId){
-        Long millSecondOfLatestRoundCard = Long.valueOf(0);
+    public Long getMillSecondOfLatestUpdate(String stageId){
+        Long millSecondOfLatestUpdate = Long.valueOf(0);
 
         List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
         if (roundList.size() > 0) {
@@ -465,11 +508,20 @@ public class StageService {
             Optional<RoundCard> optionalRoundCard =
                     roundCardRepository.findFirstByRoundIdInOrderByCreateDateDesc(roundIdList);
             if (optionalRoundCard.isPresent()) {
-                millSecondOfLatestRoundCard = optionalRoundCard.get().createDate.getTime();
-                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestRoundCard);
+                millSecondOfLatestUpdate = optionalRoundCard.get().createDate.getTime();
+                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
             }
         }
-        return millSecondOfLatestRoundCard;
+
+        if (millSecondOfLatestUpdate == 0) {
+            final Optional<Stage> optionalStage = stageRepository.findById(stageId);
+            if (optionalStage.isPresent()) {
+                millSecondOfLatestUpdate = optionalStage.get().updateDate.getTime();
+                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
+            }
+        }
+
+        return millSecondOfLatestUpdate;
     }
 
     public Map<Long, List<RoundCard>> getRoundCards(String stageId) {
@@ -482,7 +534,7 @@ public class StageService {
             Map<Long, List<RoundCard>> hashRoundCardMap =
                     roundCardList.stream().collect(Collectors.groupingBy(r -> r.roundId));
             log.debug("hashRoundCardMap : " + hashRoundCardMap);
-            roundCardMap = new TreeMap<>(hashRoundCardMap);
+            roundCardMap = new TreeMap<>(hashRoundCardMap).descendingMap();
 
         }
         log.debug("roundCardMap : " + roundCardMap);
@@ -491,6 +543,14 @@ public class StageService {
 
     public List<StageMember> getStageMemberForStage(String stageId) {
         List<StageMember> stageMemberList = stageMemberRepository.findByStageId(stageId);
+        return stageMemberList;
+    }
+
+    public List<StageMember> getStageMemberForSisplayStageMember(String stageId) {
+        List<String> statusList = Arrays.asList(
+                StageMemberStatus.JOINING.name(),
+                StageMemberStatus.TERMINATED.name());
+        List<StageMember> stageMemberList = stageMemberRepository.findByStageIdAndStatusIn(stageId, statusList);
         return stageMemberList;
     }
 
@@ -639,7 +699,6 @@ public class StageService {
     }
 
 
-
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 ///////////////////////  stage  //////////////////////////
@@ -655,8 +714,7 @@ public class StageService {
         return stageUserCard;
     }
 
-    private Stage createStage() {
-
+    private Stage createStageTable() {
         final String stageId = CommonUtils.getUUID();
         final String password = CommonUtils.get6DigitCode();
         final Timestamp now = Timestamp.valueOf(LocalDateTime.now());
@@ -677,6 +735,7 @@ public class StageService {
 
             Stage currentStage = optionalStage.get();
             currentStage.status = StageStatus.END_GAME.name();
+            currentStage.updateDate = Timestamp.valueOf(LocalDateTime.now());
             stageRepository.save(currentStage);
 
             List<StageMember> stageMemberList = stageMemberRepository.findByStageId(stageId);
@@ -754,15 +813,53 @@ public class StageService {
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 
-    private void addTempMember(String userId, String stageId) {
-        addMember_doNotCallDirectly(userId, stageId, StageMemberStatus.APPLY_TO_JOIN.name());
+    private void addMemberAndSendMessageToMember(String userId, Stage stage) {
+        addMember(userId, stage.id);
+        sendMessageForJoiningMember_doNotCallDirectly(userId, stage);
     }
 
     private void addMember(String userId, String stageId) {
-        addMember_doNotCallDirectly(userId, stageId, StageMemberStatus.JOINING.name());
+        final UserProfileResponse userProfileResponse = lineMessage.getProfile(userId);
+        addMember_doNotCallDirectly(
+                stageId,
+                userId,
+                userProfileResponse.getDisplayName(),
+                userProfileResponse.getPictureUrl(),
+                StageMemberStatus.JOINING.name());
     }
 
-    private void addMember_doNotCallDirectly(final String userId, final String stageId, final String status) {
+    private void addTempMember(String userId, String stageId) {
+        final UserProfileResponse userProfileResponse = lineMessage.getProfile(userId);
+        addMember_doNotCallDirectly(
+                stageId,
+                userId,
+                userProfileResponse.getDisplayName(),
+                userProfileResponse.getPictureUrl(),
+                StageMemberStatus.APPLY_TO_JOIN.name());
+    }
+
+    private void addMemberAndSendMessageToMemberFromWeb(OAuth2Authentication oAuth2Authentication, Stage stage) {
+        Map<String, Object> properties = (Map<String, Object>) oAuth2Authentication.getUserAuthentication().getDetails();
+        final String userId = (String) properties.get("userId");
+        final String displayName = (String) properties.get("displayName");
+        final String pictureUrl = (String) properties.get("pictureUrl");
+        addMember_doNotCallDirectly(
+                stage.id,
+                userId,
+                displayName,
+                pictureUrl,
+                StageMemberStatus.JOINING.name());
+
+        sendMessageForJoiningMember_doNotCallDirectly(userId, stage);
+    }
+
+    private void addMember_doNotCallDirectly(
+            final String stageId,
+            final String userId,
+            final String displayName,
+            final String pictureUrl,
+            final String status) {
+
         final Optional<StageMember> optionalStageMember = getStageMemberForEachUser(userId);
         if (optionalStageMember.isPresent()) {
             List<String> statusList = Arrays.asList(
@@ -770,16 +867,30 @@ public class StageService {
                     StageMemberStatus.JOINING.name());
             stageMemberRepository.deleteByUserIdAndStatusIn(userId, statusList);
         }
-
-        final UserProfileResponse userProfileResponse = lineMessage.getProfile(userId);
         final StageMember stageMember = new StageMember();
         stageMember.id = CommonUtils.getUUID();
         stageMember.stageId = stageId;
-        stageMember.userId = userProfileResponse.getUserId();
-        stageMember.userName = userProfileResponse.getDisplayName();
-        stageMember.pictureUrl = userProfileResponse.getPictureUrl();
+        stageMember.userId = userId;
+        stageMember.userName = displayName;
+        stageMember.pictureUrl = pictureUrl;
         stageMember.status = status;
         stageMemberRepository.save(stageMember);
+    }
+
+    private void sendMessageForJoiningMember_doNotCallDirectly(String userId, Stage stage) {
+        final String url = CommonUtils.createStageUrl(stage.id);
+        final String correctPassword = messageSource.getMessage(
+                "bot.stage.input.password.correct.password",
+                new Object[]{stage.id, url},
+                Locale.JAPANESE);
+            log.debug("addMemberAndSendMessageToMember start 心理的安全性ゲームBot");
+        try {
+            lineMessage.multicast(Collections.singleton(userId),
+                    Collections.singletonList(new TextMessage(correctPassword)));
+        } catch (RuntimeException ex) {
+            log.debug("addMemberAndSendMessageToMember RuntimeException 心理的安全性ゲームBot");
+            log.debug(ex.getMessage());
+        }
     }
 
     private boolean userAlreadyJoinedStage(String userId) {

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface StageMemberRepository extends JpaRepository<StageMember, String> {
 
@@ -13,6 +14,8 @@ public interface StageMemberRepository extends JpaRepository<StageMember, String
     List<StageMember> findByUserIdAndStatusAndStageId(String userId, String status, String stageId);
 
     List<StageMember> findByUserIdAndStatusIn(String userId, List<String> statusList);
+
+    List<StageMember> findByStageIdAndStatusIn(String stageId, List<String> statusList);
 
     List<StageMember> findByStageId(String stageId);
 

@@ -16,4 +16,9 @@ public final class CommonUtils {
     public static String get6DigitCode() {
         return String.format("%06d", rnd.nextInt(999999));
     }
+
+    public static String createStageUrl(String stageId) {
+        final String url = "https://psychological-safety-game.herokuapp.com/stage/" + stageId;
+        return url;
+    }
 }
