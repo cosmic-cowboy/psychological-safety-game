@@ -121,3 +121,15 @@ hr {
 .media-member {
   align-items: center;
 }
+
+.round-card {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+}
+.round-card-title {
+    height: 40px;
+}
+
+.round-card-text {
+    height: 80px;
+}

@@ -100,7 +100,14 @@
                             </div>
                             <div class="content-list-body row">
                                 <div th:each="roundCard : ${entry.value}" class="col-lg-3">
-                                    <img th:src="|https://psychological-safety-game.herokuapp.com/cards/${roundCard.cardId}.jpg|" th:alt="${roundCard.cardId}" class="rounded round-card-img">
+                                    <div class="card text-center round-card">
+                                        <div class="card-header">状況</div>
+                                        <div class="card-body">
+                                            <p class="card-title round-card-title text-warning">事故った</p>
+                                            <p class="card-text round-card-text">これダメですよね？　誰の責任？</p>
+                                        </div>
+                                    </div>
+<!--                                    <img th:src="|https://psychological-safety-game.herokuapp.com/cards/${roundCard.cardId}.jpg|" th:alt="${roundCard.cardId}" class="rounded round-card-img">-->
                                     <div class="media media-member">
                                         <img th:src="${(__${roundCard.userId}__).pictureUrl}" class="avatar-mini mr-3" th:alt="${(__${roundCard.userId}__).userName}">
                                         <div class="media-body">
