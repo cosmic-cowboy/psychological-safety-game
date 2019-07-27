@@ -55,7 +55,7 @@
                                 <div class="content-list-body row">
                                     <div class="col-lg-3">
                                         <p class="text-center">
-
+                                            <img width="150px" class="img-fluid" alt="start game" src="../img/start_game.jpg" />
                                         </p>
                                     </div>
                                     <div class="col-lg-9 lead line-height-2">
@@ -93,25 +93,24 @@
                         </div>
                     </div>
                     <hr />
-                    <div class="page-content">
-                        <div th:each="entry : ${roundCardMap}" th:title="${entry.key}" class="content-list">
+                    <div class="page-content col-lg-11 col-xl-10">
+                        <div th:each="entry : ${roundCardForViewMap}" th:title="${entry.key}" class="content-list">
                             <div class="content-list-head row">
                                 <h3 th:text="'Round : ' + (${entryStat.size} - ${entryStat.index})"></h3>
                             </div>
                             <div class="content-list-body row">
-                                <div th:each="roundCard : ${entry.value}" class="col-lg-3">
-                                    <div class="card text-center round-card">
-                                        <div class="card-header">状況</div>
+                                <div th:each="roundCardForView : ${entry.value}" class="col-lg-3">
+                                    <div th:classappend="${(roundCardForView.type == 'SITUATION' ? 'bg-info text-white' : '') + (roundCardForView.type == 'THEME' ? 'bg-success text-white' : '')}" class="card text-center round-card">
+                                        <div th:text="${roundCardForView.typeForDisplay}" class="card-header"></div>
                                         <div class="card-body">
-                                            <p class="card-title round-card-title text-warning">事故った</p>
-                                            <p class="card-text round-card-text">これダメですよね？　誰の責任？</p>
+                                            <p th:text="${roundCardForView.title}" class="card-title round-card-title text-warning"></p>
+                                            <p th:text="${roundCardForView.text}" class="card-text round-card-text"></p>
                                         </div>
                                     </div>
-<!--                                    <img th:src="|https://psychological-safety-game.herokuapp.com/cards/${roundCard.cardId}.jpg|" th:alt="${roundCard.cardId}" class="rounded round-card-img">-->
                                     <div class="media media-member">
-                                        <img th:src="${(__${roundCard.userId}__).pictureUrl}" class="avatar-mini mr-3" th:alt="${(__${roundCard.userId}__).userName}">
+                                        <img th:src="${(__${roundCardForView.userId}__).pictureUrl}" class="avatar-mini mr-3" th:alt="${(__${roundCardForView.userId}__).userName}">
                                         <div class="media-body">
-                                            <p th:text=${(__${roundCard.userId}__).userName} class="mb-0"></p>
+                                            <p th:text=${(__${roundCardForView.userId}__).userName} class="mb-0"></p>
                                         </div>
                                     </div>
                                 </div>
@@ -131,7 +130,7 @@
                 $('[data-toggle="tooltip"]').tooltip()
             });
             $(function() {
-                var POLLING_INTERVAL_TIME_IN_MILLIS = 10000;//10s
+                var POLLING_INTERVAL_TIME_IN_MILLIS = 3000;//3s
 
                 (function polling() {
                     getCountUp();

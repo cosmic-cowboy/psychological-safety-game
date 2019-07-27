@@ -1,9 +1,9 @@
 package com.slgerkamp.psychological.safety.game.application.controller;
 
 import com.slgerkamp.psychological.safety.game.application.form.StageJoinForm;
+import com.slgerkamp.psychological.safety.game.application.model.RoundCardForView;
 import com.slgerkamp.psychological.safety.game.domain.game.StageStatus;
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
-import com.slgerkamp.psychological.safety.game.infra.model.RoundCard;
 import com.slgerkamp.psychological.safety.game.infra.model.Stage;
 import com.slgerkamp.psychological.safety.game.infra.model.StageMember;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,7 +41,7 @@ public class WebController {
         boolean isMember = isMember(stageMemberList, oAuth2Authentication);
 
         if (isMember) {
-            Map<Long, List<RoundCard>> roundCardMap = stageService.getRoundCards(stageId);
+            Map<Long, List<RoundCardForView>> roundCardForViewMap = stageService.getRoundCards(stageId);
             Long millSecondOfLatestUpdate = stageService.getMillSecondOfLatestUpdate(stageId);
             String urlForPolling = "/stage/" + stageId + "/check/" + millSecondOfLatestUpdate;
             boolean stageNotStartedYet = stage.status.equals(StageStatus.PARTICIPANTS_WANTED.name());
@@ -56,7 +56,7 @@ public class WebController {
             model.addAttribute("stageQRcode", "/stage/" + stage.id + "/qrcode");
             model.addAttribute("stagePassword", stage.password);
             model.addAttribute("stageMemberList", stageMemberList);
-            model.addAttribute("roundCardMap", roundCardMap);
+            model.addAttribute("roundCardForViewMap", roundCardForViewMap);
             model.addAttribute("urlForPolling", urlForPolling);
 
             for(StageMember stageMember : stageMemberList){

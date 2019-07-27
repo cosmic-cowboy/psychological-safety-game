@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.sql.Timestamp;
+
 
 @Data
 @NoArgsConstructor
@@ -22,4 +24,5 @@ public class StageMember {
     public String pictureUrl;
     public String status;
     public Integer turnNumber;
+    public Timestamp createDate;
 }

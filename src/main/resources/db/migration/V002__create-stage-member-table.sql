@@ -6,6 +6,7 @@ CREATE TABLE stage_member (
   picture_url  VARCHAR NOT NULL,
   status       VARCHAR NOT NULL,
   turn_number  INTEGER,
+  create_date  TIMESTAMP NOT NULL,
   UNIQUE(stage_id, user_id),
   CONSTRAINT foreign_key_stage_member_stage_id FOREIGN KEY (stage_id) REFERENCES stage(id)
 );

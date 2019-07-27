@@ -1,12 +1,25 @@
 package com.slgerkamp.psychological.safety.game.domain.game.service;
 
+
 import com.linecorp.bot.model.action.PostbackAction;
-import com.linecorp.bot.model.message.Message;
+import com.linecorp.bot.model.action.URIAction;
+import com.linecorp.bot.model.message.FlexMessage;
 import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
+import com.linecorp.bot.model.message.flex.component.Box;
+import com.linecorp.bot.model.message.flex.component.Button;
+import com.linecorp.bot.model.message.flex.component.Separator;
+import com.linecorp.bot.model.message.flex.component.Text;
+import com.linecorp.bot.model.message.flex.container.Bubble;
+import com.linecorp.bot.model.message.flex.container.Carousel;
+import com.linecorp.bot.model.message.flex.unit.FlexAlign;
+import com.linecorp.bot.model.message.flex.unit.FlexFontSize;
+import com.linecorp.bot.model.message.flex.unit.FlexLayout;
+import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
 import com.linecorp.bot.model.message.template.*;
 import com.linecorp.bot.model.profile.UserProfileResponse;
 import com.slgerkamp.psychological.safety.game.application.controller.GameController;
+import com.slgerkamp.psychological.safety.game.application.model.RoundCardForView;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
 import com.slgerkamp.psychological.safety.game.infra.message.LineMessage;
 import com.slgerkamp.psychological.safety.game.infra.model.*;
@@ -45,6 +58,9 @@ public class StageService {
     private StageUserCardRepository stageUserCardRepository;
 
     @Autowired
+    private CardRepository cardRepository;
+
+    @Autowired
     private LineMessage lineMessage;
 
     @Autowired
@@ -64,12 +80,48 @@ public class StageService {
             final String url = CommonUtils.createStageUrl(result_stage.id);
 
             qrCodeGenerator.create(url, result_stage.id);
-            // send password to creator
-            String msg_1 = messageSource.getMessage(
+
+            String successMessage = messageSource.getMessage(
                     "bot.stage.create.success",
-                    new Object[]{url},
+                    null,
                     Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(new TextMessage(msg_1)));
+            String urlLabel = messageSource.getMessage(
+                    "bot.stage.create.success.label",
+                    null,
+                    Locale.JAPANESE);
+
+            final Text textComponent =
+                    Text.builder()
+                            .text(successMessage)
+                            .wrap(true)
+                            .margin(FlexMarginSize.XXL)
+                            .build();
+
+            final Button button =
+                    Button.builder()
+                            .style(Button.ButtonStyle.PRIMARY)
+                            .action(new URIAction(urlLabel, url, null))
+                            .margin(FlexMarginSize.XXL)
+                            .build();
+
+            final Box bodyBox = Box.builder()
+                    .layout(FlexLayout.VERTICAL)
+                    .contents(Arrays.asList(textComponent))
+                    .build();
+
+            final Box footerBox =
+                    Box.builder()
+                            .layout(FlexLayout.VERTICAL)
+                            .contents(Arrays.asList(button))
+                            .build();
+
+            final Bubble bubble =
+                    Bubble.builder()
+                            .body(bodyBox)
+                            .footer(footerBox)
+                            .build();
+
+            lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(new FlexMessage(successMessage, bubble)));
         }
     }
 
@@ -181,6 +233,7 @@ public class StageService {
                 && optionalStage.isPresent()
                 && optionalStage.get().status.equals(StageStatus.PARTICIPANTS_WANTED.name())) {
             final Stage stage = optionalStage.get();
+
             final String buttonTitle = messageSource.getMessage(
                     "bot.stage.start.request.title",
                     new Object[]{stage.id},
@@ -189,6 +242,7 @@ public class StageService {
                     "bot.stage.start.request.text",
                     null,
                     Locale.JAPANESE);
+
             final String postbackLabel = messageSource.getMessage(
                     "bot.stage.start.request.button.label",
                     null,
@@ -201,16 +255,15 @@ public class StageService {
                     + PostBackAction.CONFIRM_TO_START_STAGE.name() + "&"
                     + PostBackKeyName.STAGE.keyName + "=" + stage.id;
 
-            ButtonsTemplate buttonsTemplate = new ButtonsTemplate(
-                    null, buttonTitle, buttonText, Arrays.asList(
-                    new PostbackAction(postbackLabel, postbackData, postbackText)));
-
             final String altText = messageSource.getMessage(
                     "bot.stage.start.request.altText",
                     null,
                     Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId),
-                    Collections.singletonList(new TemplateMessage(altText, buttonsTemplate)));
+
+            final FlexMessage flexMessage =
+                    createFlexButton(buttonTitle, buttonText, postbackLabel, postbackText, postbackData, altText);
+            lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(flexMessage));
+
         } else {
             final String applyingStageNotFound = messageSource.getMessage(
                     "bot.stage.start.request.error",
@@ -221,6 +274,7 @@ public class StageService {
 
         }
     }
+
 
     public void confirmToStartStage(String userId, String stageId) {
         // check sender joined this stage
@@ -272,8 +326,8 @@ public class StageService {
             stageRepository.save(currentStage);
 
             // set cards for this stage
-            List<String> commentsCards = Cards.getTypeList("comment");
-            List<String> optionCards = Cards.getTypeList("option");
+            List<Card> commentsCards = cardRepository.findByType(CardType.COMMENT.name());
+            List<Card> optionCards = cardRepository.findByType(CardType.OPTION.name());
             Collections.shuffle(commentsCards);
             Collections.shuffle(optionCards);
             int count = commentsCards.size() / stageMemberList.size();
@@ -322,6 +376,7 @@ public class StageService {
     public void setRoundCard(String userId, Long roundId, String cardId) {
         // check current turn
         Optional<Round> optionalRound = roundRepository.findById(roundId);
+        Card card = cardRepository.findById(cardId).get();
         List<StageMember> userStageMemberList =
                 stageMemberRepository.findByUserIdAndStatus(userId, StageMemberStatus.JOINING.name());
 
@@ -337,11 +392,11 @@ public class StageService {
                 roundCard.id = CommonUtils.getUUID();
                 roundCard.roundId = roundId;
                 roundCard.userId = userId;
-                roundCard.cardId = cardId;
+                roundCard.cardId = card.id;
                 roundCard.turnNumber = turnNumber;
                 roundCard.createDate = Timestamp.valueOf(LocalDateTime.now());
                 roundCardRepository.save(roundCard);
-                stageUserCardRepository.deleteByStageIdAndUserIdAndCardId(round.stageId, userId, cardId);
+                stageUserCardRepository.deleteByStageIdAndUserIdAndCardId(round.stageId, userId, card.id);
 
                 final String successMessage = messageSource.getMessage(
                         "bot.round.set.round.card.success",
@@ -354,7 +409,8 @@ public class StageService {
                 List<StageMember> stageMemberList = stageMemberRepository.findByStageId(round.stageId);
 
                 Integer nextCurrentTurnNumber;
-                if(!cardId.startsWith("THEME") && !cardId.startsWith("OPTION")) {
+                if(!card.type.equals(CardType.THEME.name())
+                        && !card.type.equals(CardType.OPTION.name())) {
 
                     if (round.currentTurnNumber == (stageMemberList.size() - 1)) {
                         nextCurrentTurnNumber = 0;
@@ -384,10 +440,10 @@ public class StageService {
                             Collections.singletonList(new TextMessage(nextYourTurnMessage)));
                 } else {
 
-                    if (cardId.startsWith("THEME")) {
+                    if (card.type.equals(CardType.THEME.name())) {
                         createNewRound(round.stageId);
                     } else {
-                        List<String> themeList = Cards.getTypeList("theme");
+                        List<Card> themeList = cardRepository.findByType(CardType.THEME.name());
                         createCard(round.stageId, round.id, themeList, nextUserId);
                     }
                 }
@@ -441,17 +497,16 @@ public class StageService {
             final String postbackData = PostBackKeyName.ACTION.keyName + "="
                     + PostBackAction.CONFIRM_TO_FINISH_STAGE.name() + "&"
                     + PostBackKeyName.STAGE.keyName + "=" + stage.id;
-
-            ButtonsTemplate buttonsTemplate = new ButtonsTemplate(
-                    null, buttonTitle, buttonText, Arrays.asList(
-                    new PostbackAction(postbackLabel, postbackData, postbackText)));
-
             final String altText = messageSource.getMessage(
                     "bot.stage.end.request.altText",
                     null,
                     Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId),
-                    Collections.singletonList(new TemplateMessage(altText, buttonsTemplate)));
+
+            final FlexMessage flexMessage =
+                    createFlexButton(buttonTitle, buttonText, postbackLabel, postbackText, postbackData, altText);
+
+            lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(flexMessage));
+
         } else {
             final String applyingStageNotFound = messageSource.getMessage(
                     "bot.stage.end.request.error",
@@ -488,6 +543,56 @@ public class StageService {
         }
     }
 
+
+    private FlexMessage createFlexButton(
+            String buttonTitle,
+            String buttonText,
+            String postbackLabel,
+            String postbackText,
+            String postbackData,
+            String altText) {
+        final Text titleComponent =
+                Text.builder()
+                        .text(buttonTitle)
+                        .wrap(true)
+                        .weight(Text.TextWeight.BOLD)
+                        .build();
+
+        final Text textComponent =
+                Text.builder()
+                        .text(buttonText)
+                        .wrap(true)
+                        .margin(FlexMarginSize.XXL)
+                        .build();
+
+        final Button button =
+                Button.builder()
+                        .style(Button.ButtonStyle.PRIMARY)
+                        .action(new PostbackAction(postbackLabel, postbackData, postbackText))
+                        .margin(FlexMarginSize.XXL)
+                        .build();
+
+        final Box bodyBox = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList(titleComponent, textComponent))
+                .build();
+
+        final Box footerBox =
+                Box.builder()
+                        .layout(FlexLayout.VERTICAL)
+                        .contents(Arrays.asList(button))
+                        .build();
+
+        final Bubble bubble =
+                Bubble.builder()
+                        .body(bodyBox)
+                        .footer(footerBox)
+                        .build();
+
+        return new FlexMessage(altText, bubble);
+    }
+
+
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 ///////////////////  public method  //////////////////////
@@ -519,20 +624,55 @@ public class StageService {
                 millSecondOfLatestUpdate = optionalStage.get().updateDate.getTime();
                 log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
             }
+
+            final Optional<StageMember> optionalStageMember =
+                    stageMemberRepository.findFirstByStageIdOrderByCreateDateDesc(stageId);
+            if (optionalStageMember.isPresent()) {
+                Long createDate = optionalStageMember.get().createDate.getTime();
+                if (millSecondOfLatestUpdate < createDate) {
+                    millSecondOfLatestUpdate = createDate;
+                }
+            }
         }
 
         return millSecondOfLatestUpdate;
     }
 
-    public Map<Long, List<RoundCard>> getRoundCards(String stageId) {
+    public Map<Long, List<RoundCardForView>> getRoundCards(String stageId) {
         List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
-        Map<Long, List<RoundCard>> roundCardMap = new TreeMap<>();
+        Map<Long, List<RoundCardForView>> roundCardMap = new TreeMap<>();
 
         if (roundList.size() > 0) {
-            List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
-            List<RoundCard> roundCardList = roundCardRepository.findByRoundIdIn(roundIdList);
-            Map<Long, List<RoundCard>> hashRoundCardMap =
-                    roundCardList.stream().collect(Collectors.groupingBy(r -> r.roundId));
+            final List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
+            final List<RoundCard> roundCardList = roundCardRepository.findByRoundIdIn(roundIdList);
+            final List<String> cardIdList = roundCardList.stream().map(r -> r.cardId).collect(Collectors.toList());
+            final List<Card> cardList = cardRepository.findByIdIn(cardIdList);
+
+            List<RoundCardForView> roundCardForViewList = new ArrayList<>();
+            for(RoundCard roundCard : roundCardList) {
+                for (Card tempCard : cardList) {
+                    if (tempCard.id.equals(roundCard.cardId)){
+                        Card card = tempCard;
+                        RoundCardForView roundCardForView = new RoundCardForView();
+                        roundCardForView.id = roundCard.id;
+                        roundCardForView.roundId = roundCard.roundId;
+                        roundCardForView.turnNumber = roundCard.turnNumber;
+                        roundCardForView.userId = roundCard.userId;
+                        roundCardForView.cardId = roundCard.cardId;
+                        roundCardForView.type = card.type;
+                        roundCardForView.typeForDisplay = messageSource.getMessage(
+                                CardType.valueOf(card.type).message,
+                                null,
+                                Locale.JAPANESE);
+                        roundCardForView.title = card.title;
+                        roundCardForView.text = card.text;
+                        roundCardForView.word = roundCard.word;
+                        roundCardForViewList.add(roundCardForView);
+                    }
+                }
+            }
+            Map<Long, List<RoundCardForView>> hashRoundCardMap =
+                    roundCardForViewList.stream().collect(Collectors.groupingBy(r -> r.roundId));
             log.debug("hashRoundCardMap : " + hashRoundCardMap);
             roundCardMap = new TreeMap<>(hashRoundCardMap).descendingMap();
 
@@ -618,18 +758,26 @@ public class StageService {
                     .map(s -> s.userId)
                     .findFirst()
                     .get();
-            List<String> situationList = Cards.getTypeList("situation");
+            List<Card> situationList = cardRepository.findByType(CardType.SITUATION.name());
             // get situation cards someone already sent
             List<Long> roundIds = roundList.stream().map(r -> r.id).collect(Collectors.toList());
             List<String> roundCardListForSituation =
                     roundCardRepository
                             .findByRoundIdInAndCardIdStartingWith(roundIds, "SITUATION")
                             .stream().map(roundCard -> roundCard.cardId).collect((Collectors.toList()));
-            situationList.removeAll(roundCardListForSituation);
+            for(int i = 0; i < situationList.size(); i++) {
+                Card card = situationList.get(i);
+                for(String cardId : roundCardListForSituation) {
+                    if(card.id.equals(cardId)) {
+                        situationList.remove(i);
+                    }
+                }
+            }
+            Collections.shuffle(situationList);
             log.debug("roundCardListForSituation : " + roundCardListForSituation);
             log.debug("situationList : " + situationList);
 
-            List<String> tempList = new ArrayList<>();
+            List<Card> tempList = new ArrayList<>();
             for (int i = 0; i < situationList.size(); i++ ){
                 tempList.add(situationList.get(i));
                 if (i % 10 == 9 || i >= (situationList.size() - 1)) {
@@ -649,15 +797,69 @@ public class StageService {
             // send comment and option card to stage member except evil
             for (Map.Entry<String, List<String>> entry : stageUserCardListMap.entrySet()) {
                 String userId = entry.getKey();
+                List<Card> cardList = cardRepository.findByIdIn(entry.getValue());
                 if (!userId.equals(evil)) {
-                    createCard(stageId, roundId, entry.getValue(), userId);
+                    createCard(stageId, roundId, cardList, userId);
                 }
             }
 
         }
     }
 
-    private void createCard(String stageId, Long roundId, List<String> cardList, String userId) {
+    private void createCard(String stageId, Long roundId, List<Card> cardList, String userId) {
+
+        List<Bubble> bubbleList = new ArrayList<>();
+
+        for(Card card : cardList) {
+            bubbleList.add(__createCardBubble(stageId, roundId, card));
+        }
+
+        final Carousel carousel =
+                Carousel.builder()
+                        .contents(bubbleList)
+                        .build();
+
+        final String altText = messageSource.getMessage(
+                "bot.round.user.cards.altText",
+                null,
+                Locale.JAPANESE);
+
+        lineMessage.multicast(
+                Collections.singleton(userId),
+                Collections.singletonList(new FlexMessage(altText, carousel)));
+
+    }
+
+    private Bubble __createCardBubble(String stageId, Long roundId, Card card){
+
+        final String typeForDisplay = messageSource.getMessage(
+                CardType.valueOf(card.type).message,
+                null,
+                Locale.JAPANESE);
+
+        final Text typeComponent =
+                Text.builder()
+                        .text(typeForDisplay)
+                        .wrap(true)
+                        .weight(Text.TextWeight.BOLD)
+                        .align(FlexAlign.CENTER)
+                        .size(FlexFontSize.XXL)
+                        .build();
+
+        final Separator separator =
+                Separator.builder()
+                        .margin(FlexMarginSize.XXL)
+                        .build();
+
+        final Text textComponent =
+                Text.builder()
+                        .text(card.text)
+                        .wrap(true)
+                        .align(FlexAlign.CENTER)
+                        .size(FlexFontSize.XXL)
+                        .margin(FlexMarginSize.XXL)
+                        .build();
+
         final String postbackLabel = messageSource.getMessage(
                 "bot.round.user.cards.image.label",
                 null,
@@ -666,29 +868,57 @@ public class StageService {
                 "bot.round.user.cards.image.text",
                 null,
                 Locale.JAPANESE);
-        final String altText = messageSource.getMessage(
-                "bot.round.user.cards.altText",
-                null,
-                Locale.JAPANESE);
+        final String postbackData = PostBackKeyName.ACTION.keyName + "="
+                + PostBackAction.SET_ROUND_CARD.name() + "&"
+                + PostBackKeyName.STAGE.keyName + "=" + stageId + "&"
+                + PostBackKeyName.ROUND.keyName + "=" + roundId + "&"
+                + PostBackKeyName.CARD.keyName + "=" + card.id;
 
-        List<ImageCarouselColumn> imageCarouselColumns = new ArrayList<>();
-        for(String cardId : cardList) {
-            final String postbackData = PostBackKeyName.ACTION.keyName + "="
-                    + PostBackAction.SET_ROUND_CARD.name() + "&"
-                    + PostBackKeyName.STAGE.keyName + "=" + stageId + "&"
-                    + PostBackKeyName.ROUND.keyName + "=" + roundId + "&"
-                    + PostBackKeyName.CARD.keyName + "=" + cardId;
-            final ImageCarouselColumn imageCarouselColumn = new ImageCarouselColumn(
-                    Cards.getFileName(cardId),
-                    new PostbackAction(postbackLabel, postbackData, postbackText));
-            imageCarouselColumns.add(imageCarouselColumn);
+        final Button button =
+                Button.builder()
+                        .style(Button.ButtonStyle.PRIMARY)
+                        .action(new PostbackAction(postbackLabel, postbackData, postbackText))
+                        .margin(FlexMarginSize.XXL)
+                        .build();
+
+        final Box bodyBox;
+
+        if(!card.title.equals("")) {
+            final Text titleComponent =
+                    Text.builder()
+                            .text(card.title)
+                            .wrap(true)
+                            .weight(Text.TextWeight.BOLD)
+                            .align(FlexAlign.CENTER)
+                            .color("#ffc107")
+                            .size(FlexFontSize.XXL)
+                            .margin(FlexMarginSize.XXL)
+                            .build();
+            bodyBox = Box.builder()
+                    .layout(FlexLayout.VERTICAL)
+                    .contents(Arrays.asList(typeComponent, separator, titleComponent, textComponent))
+                    .build();
+        } else {
+            bodyBox = Box.builder()
+                    .layout(FlexLayout.VERTICAL)
+                    .contents(Arrays.asList(typeComponent, separator, textComponent))
+                    .build();
         }
 
-        TemplateMessage templateMessage =
-                new TemplateMessage(altText, new ImageCarouselTemplate(imageCarouselColumns));
-        lineMessage.multicast(
-                Collections.singleton(userId), Collections.singletonList(templateMessage));
-    }
+        final Box footerBox =
+                Box.builder()
+                        .layout(FlexLayout.VERTICAL)
+                        .contents(Arrays.asList(button))
+                        .build();
+
+        final Bubble bubble =
+                Bubble.builder()
+                        .body(bodyBox)
+                        .footer(footerBox)
+                        .build();
+        return bubble;
+
+    };
 
     private List<Round> finishAllRounds(String stageId) {
         List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
@@ -705,12 +935,12 @@ public class StageService {
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 
-    private StageUserCard createStageUserCard(String userId, String stageId, String cardId) {
+    private StageUserCard createStageUserCard(String userId, String stageId, Card card) {
         final StageUserCard stageUserCard = new StageUserCard();
         stageUserCard.id = CommonUtils.getUUID();
         stageUserCard.userId = userId;
         stageUserCard.stageId = stageId;
-        stageUserCard.cardId = cardId;
+        stageUserCard.cardId = card.id;
         return stageUserCard;
     }
 
@@ -874,6 +1104,7 @@ public class StageService {
         stageMember.userName = displayName;
         stageMember.pictureUrl = pictureUrl;
         stageMember.status = status;
+        stageMember.createDate = Timestamp.valueOf(LocalDateTime.now());
         stageMemberRepository.save(stageMember);
     }
 
