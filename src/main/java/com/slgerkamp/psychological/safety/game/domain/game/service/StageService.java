@@ -104,10 +104,11 @@ public class StageService {
                             .margin(FlexMarginSize.XXL)
                             .build();
 
-            final Box bodyBox = Box.builder()
-                    .layout(FlexLayout.VERTICAL)
-                    .contents(Arrays.asList(textComponent))
-                    .build();
+            final Box bodyBox =
+                    Box.builder()
+                            .layout(FlexLayout.VERTICAL)
+                            .contents(Arrays.asList(textComponent))
+                            .build();
 
             final Box footerBox =
                     Box.builder()
@@ -445,6 +446,12 @@ public class StageService {
                     } else {
                         List<Card> themeList = cardRepository.findByType(CardType.THEME.name());
                         createCard(round.stageId, round.id, themeList, nextUserId);
+                        final String nextYourTurnMessage = messageSource.getMessage(
+                                "bot.round.set.round.card.for.theme.next.your.turn",
+                                null,
+                                Locale.JAPANESE);
+                        lineMessage.multicast(Collections.singleton(nextUserId),
+                                Collections.singletonList(new TextMessage(nextYourTurnMessage)));
                     }
                 }
 
