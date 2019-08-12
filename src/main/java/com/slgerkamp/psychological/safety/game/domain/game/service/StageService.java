@@ -18,6 +18,7 @@ import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
 import com.linecorp.bot.model.message.template.*;
 import com.linecorp.bot.model.profile.UserProfileResponse;
+import com.slgerkamp.psychological.safety.game.application.config.WebSocketConfig;
 import com.slgerkamp.psychological.safety.game.application.controller.GameController;
 import com.slgerkamp.psychological.safety.game.application.model.RoundCardForView;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
@@ -28,8 +29,10 @@ import com.slgerkamp.psychological.safety.game.infra.utils.QrCodeGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -68,6 +71,9 @@ public class StageService {
 
     @Autowired
     private QrCodeGenerator qrCodeGenerator;
+
+    @Autowired
+    private SimpMessagingTemplate simpMessagingTemplate;
 
     public void createStageTable(String userId) {
         // check whether sender already join a stage or not
@@ -326,6 +332,8 @@ public class StageService {
             currentStage.updateDate = Timestamp.valueOf(LocalDateTime.now());
             stageRepository.save(currentStage);
 
+            publishToStompClient(stageId);
+
             // set cards for this stage
             List<Card> commentsCards = cardRepository.findByType(CardType.COMMENT.name());
             List<Card> optionCards = cardRepository.findByType(CardType.OPTION.name());
@@ -455,6 +463,7 @@ public class StageService {
                     }
                 }
 
+                publishToStompClient(round.stageId);
             } else {
                 final String notYourTurnMessage = messageSource.getMessage(
                         "bot.round.set.round.card.not.your.turn",
@@ -611,39 +620,39 @@ public class StageService {
         return optionalStage.get();
     }
 
-    public Long getMillSecondOfLatestUpdate(String stageId){
-        Long millSecondOfLatestUpdate = Long.valueOf(0);
-
-        List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
-        if (roundList.size() > 0) {
-            List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
-            Optional<RoundCard> optionalRoundCard =
-                    roundCardRepository.findFirstByRoundIdInOrderByCreateDateDesc(roundIdList);
-            if (optionalRoundCard.isPresent()) {
-                millSecondOfLatestUpdate = optionalRoundCard.get().createDate.getTime();
-                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
-            }
-        }
-
-        if (millSecondOfLatestUpdate == 0) {
-            final Optional<Stage> optionalStage = stageRepository.findById(stageId);
-            if (optionalStage.isPresent()) {
-                millSecondOfLatestUpdate = optionalStage.get().updateDate.getTime();
-                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
-            }
-
-            final Optional<StageMember> optionalStageMember =
-                    stageMemberRepository.findFirstByStageIdOrderByCreateDateDesc(stageId);
-            if (optionalStageMember.isPresent()) {
-                Long createDate = optionalStageMember.get().createDate.getTime();
-                if (millSecondOfLatestUpdate < createDate) {
-                    millSecondOfLatestUpdate = createDate;
-                }
-            }
-        }
-
-        return millSecondOfLatestUpdate;
-    }
+//    public Long getMillSecondOfLatestUpdate(String stageId){
+//        Long millSecondOfLatestUpdate = Long.valueOf(0);
+//
+//        List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
+//        if (roundList.size() > 0) {
+//            List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
+//            Optional<RoundCard> optionalRoundCard =
+//                    roundCardRepository.findFirstByRoundIdInOrderByCreateDateDesc(roundIdList);
+//            if (optionalRoundCard.isPresent()) {
+//                millSecondOfLatestUpdate = optionalRoundCard.get().createDate.getTime();
+//                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
+//            }
+//        }
+//
+//        if (millSecondOfLatestUpdate == 0) {
+//            final Optional<Stage> optionalStage = stageRepository.findById(stageId);
+//            if (optionalStage.isPresent()) {
+//                millSecondOfLatestUpdate = optionalStage.get().updateDate.getTime();
+//                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
+//            }
+//
+//            final Optional<StageMember> optionalStageMember =
+//                    stageMemberRepository.findFirstByStageIdOrderByCreateDateDesc(stageId);
+//            if (optionalStageMember.isPresent()) {
+//                Long createDate = optionalStageMember.get().createDate.getTime();
+//                if (millSecondOfLatestUpdate < createDate) {
+//                    millSecondOfLatestUpdate = createDate;
+//                }
+//            }
+//        }
+//
+//        return millSecondOfLatestUpdate;
+//    }
 
     public Map<Long, List<RoundCardForView>> getRoundCards(String stageId) {
         List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
@@ -1113,6 +1122,7 @@ public class StageService {
         stageMember.status = status;
         stageMember.createDate = Timestamp.valueOf(LocalDateTime.now());
         stageMemberRepository.save(stageMember);
+        publishToStompClient(stageId);
     }
 
     private void sendMessageForJoiningMember_doNotCallDirectly(String userId, Stage stage) {
@@ -1165,4 +1175,11 @@ public class StageService {
         return optionalStageMember;
     }
 
+    private void publishToStompClient(String stageId){
+        String subscriptionUrl = WebSocketConfig.DESTINATION_STAGE_PREFIX + "/" + stageId;
+        log.debug("subscriptionUrl : " + subscriptionUrl);
+        simpMessagingTemplate.convertAndSend(
+                subscriptionUrl,
+                "hello");
+    }
 }

@@ -1,5 +1,6 @@
 package com.slgerkamp.psychological.safety.game.application.controller;
 
+import com.slgerkamp.psychological.safety.game.application.config.WebSocketConfig;
 import com.slgerkamp.psychological.safety.game.application.form.StageJoinForm;
 import com.slgerkamp.psychological.safety.game.application.model.RoundCardForView;
 import com.slgerkamp.psychological.safety.game.domain.game.StageStatus;
@@ -42,8 +43,7 @@ public class WebController {
 
         if (isMember) {
             Map<Long, List<RoundCardForView>> roundCardForViewMap = stageService.getRoundCards(stageId);
-            Long millSecondOfLatestUpdate = stageService.getMillSecondOfLatestUpdate(stageId);
-            String urlForPolling = "/stage/" + stageId + "/check/" + millSecondOfLatestUpdate;
+            String subscriptionUrl = WebSocketConfig.DESTINATION_STAGE_PREFIX + "/" + stageId;
             boolean stageNotStartedYet = stage.status.equals(StageStatus.PARTICIPANTS_WANTED.name());
 
             final String webStageTitlePrefix = messageSource.getMessage(
@@ -57,7 +57,7 @@ public class WebController {
             model.addAttribute("stagePassword", stage.password);
             model.addAttribute("stageMemberList", stageMemberList);
             model.addAttribute("roundCardForViewMap", roundCardForViewMap);
-            model.addAttribute("urlForPolling", urlForPolling);
+            model.addAttribute("subscriptionUrl", subscriptionUrl);
 
             for(StageMember stageMember : stageMemberList){
                 model.addAttribute(stageMember.userId, stageMember);

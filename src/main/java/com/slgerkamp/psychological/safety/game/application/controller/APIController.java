@@ -24,18 +24,6 @@ public class APIController {
     @Autowired
     private QrCodeGenerator qrCodeGenerator;
 
-    @GetMapping("/stage/{stageId}/check/{latestRoundCard}")
-    public Map<String, Object> checkStage(@PathVariable String stageId, @PathVariable Long latestRoundCard) {
-        Boolean needUpdate = false;
-        Long millSecondOfLatestUpdate = stageService.getMillSecondOfLatestUpdate(stageId);
-        if (millSecondOfLatestUpdate > latestRoundCard) {
-            needUpdate = true;
-        }
-        final Map<String, Object> map = new HashMap<>();
-        map.put("needUpdate", needUpdate);
-        return map;
-    }
-
     @RequestMapping("/stage/{stageId}/qrcode")
     public ResponseEntity<?> image(@PathVariable String stageId) throws FileNotFoundException {
 
