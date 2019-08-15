@@ -620,40 +620,6 @@ public class StageService {
         return optionalStage.get();
     }
 
-//    public Long getMillSecondOfLatestUpdate(String stageId){
-//        Long millSecondOfLatestUpdate = Long.valueOf(0);
-//
-//        List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
-//        if (roundList.size() > 0) {
-//            List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
-//            Optional<RoundCard> optionalRoundCard =
-//                    roundCardRepository.findFirstByRoundIdInOrderByCreateDateDesc(roundIdList);
-//            if (optionalRoundCard.isPresent()) {
-//                millSecondOfLatestUpdate = optionalRoundCard.get().createDate.getTime();
-//                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
-//            }
-//        }
-//
-//        if (millSecondOfLatestUpdate == 0) {
-//            final Optional<Stage> optionalStage = stageRepository.findById(stageId);
-//            if (optionalStage.isPresent()) {
-//                millSecondOfLatestUpdate = optionalStage.get().updateDate.getTime();
-//                log.debug("millSecondOfLatestRoundCard : " + millSecondOfLatestUpdate);
-//            }
-//
-//            final Optional<StageMember> optionalStageMember =
-//                    stageMemberRepository.findFirstByStageIdOrderByCreateDateDesc(stageId);
-//            if (optionalStageMember.isPresent()) {
-//                Long createDate = optionalStageMember.get().createDate.getTime();
-//                if (millSecondOfLatestUpdate < createDate) {
-//                    millSecondOfLatestUpdate = createDate;
-//                }
-//            }
-//        }
-//
-//        return millSecondOfLatestUpdate;
-//    }
-
     public Map<Long, List<RoundCardForView>> getRoundCards(String stageId) {
         List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
         Map<Long, List<RoundCardForView>> roundCardMap = new TreeMap<>();
@@ -793,14 +759,8 @@ public class StageService {
             log.debug("roundCardListForSituation : " + roundCardListForSituation);
             log.debug("situationList : " + situationList);
 
-            List<Card> tempList = new ArrayList<>();
-            for (int i = 0; i < situationList.size(); i++ ){
-                tempList.add(situationList.get(i));
-                if (i % 10 == 9 || i >= (situationList.size() - 1)) {
-                    createCard(stageId, roundId, tempList, evil);
-                    tempList = new ArrayList<>();
-                }
-            }
+            createCard(stageId, roundId, Collections.singletonList(situationList.get(0)), evil);
+
             // send comment for evil
             final String nextYourTurnMessage = messageSource.getMessage(
                     "bot.round.set.round.card.next.your.turn",
