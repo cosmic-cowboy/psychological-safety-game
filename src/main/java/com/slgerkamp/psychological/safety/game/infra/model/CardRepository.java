@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface CardRepository extends JpaRepository<Card, String> {
 
-    List<Card> findByType(String type);
+    List<Card> findByTypeOrderByCreateDate(String type);
 
     List<Card> findByIdIn(List<String> list);
 

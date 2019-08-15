@@ -335,8 +335,8 @@ public class StageService {
             publishToStompClient(stageId);
 
             // set cards for this stage
-            List<Card> commentsCards = cardRepository.findByType(CardType.COMMENT.name());
-            List<Card> optionCards = cardRepository.findByType(CardType.OPTION.name());
+            List<Card> commentsCards = cardRepository.findByTypeOrderByCreateDate(CardType.COMMENT.name());
+            List<Card> optionCards = cardRepository.findByTypeOrderByCreateDate(CardType.OPTION.name());
             Collections.shuffle(commentsCards);
             Collections.shuffle(optionCards);
             int count = commentsCards.size() / stageMemberList.size();
@@ -452,7 +452,8 @@ public class StageService {
                     if (card.type.equals(CardType.THEME.name())) {
                         createNewRound(round.stageId);
                     } else {
-                        List<Card> themeList = cardRepository.findByType(CardType.THEME.name());
+                        //
+                        List<Card> themeList = cardRepository.findByTypeOrderByCreateDate(CardType.THEME.name());
                         createCard(round.stageId, round.id, themeList, nextUserId);
                         final String nextYourTurnMessage = messageSource.getMessage(
                                 "bot.round.set.round.card.for.theme.next.your.turn",
@@ -740,7 +741,7 @@ public class StageService {
                     .map(s -> s.userId)
                     .findFirst()
                     .get();
-            List<Card> situationList = cardRepository.findByType(CardType.SITUATION.name());
+            List<Card> situationList = cardRepository.findByTypeOrderByCreateDate(CardType.SITUATION.name());
             // get situation cards someone already sent
             List<Long> roundIds = roundList.stream().map(r -> r.id).collect(Collectors.toList());
             List<String> roundCardListForSituation =
@@ -759,9 +760,9 @@ public class StageService {
             log.debug("roundCardListForSituation : " + roundCardListForSituation);
             log.debug("situationList : " + situationList);
 
-            createCard(stageId, roundId, Collections.singletonList(situationList.get(0)), evil);
 
-            // send comment for evil
+            // send card and comment for evil
+            createCard(stageId, roundId, Collections.singletonList(situationList.get(0)), evil);
             final String nextYourTurnMessage = messageSource.getMessage(
                     "bot.round.set.round.card.next.your.turn",
                     null,
