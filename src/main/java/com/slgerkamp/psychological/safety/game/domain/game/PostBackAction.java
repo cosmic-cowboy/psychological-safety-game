@@ -2,8 +2,6 @@ package com.slgerkamp.psychological.safety.game.domain.game;
 
 public enum PostBackAction {
     CREATE,
-    GET_STAGES,
-    REQUEST_TO_JOIN_STAGE,
     REQUEST_TO_START_STAGE,
     CONFIRM_TO_START_STAGE,
     SET_ROUND_CARD,

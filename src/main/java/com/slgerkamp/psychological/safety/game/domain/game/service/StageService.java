@@ -1,12 +1,10 @@
 package com.slgerkamp.psychological.safety.game.domain.game.service;
 
 
-import com.linecorp.bot.model.action.MessageAction;
 import com.linecorp.bot.model.action.PostbackAction;
 import com.linecorp.bot.model.action.URIAction;
 import com.linecorp.bot.model.message.FlexMessage;
 import com.linecorp.bot.model.message.Message;
-import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.message.flex.component.Box;
 import com.linecorp.bot.model.message.flex.component.Button;
@@ -20,7 +18,6 @@ import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
 import com.linecorp.bot.model.message.quickreply.QuickReply;
 import com.linecorp.bot.model.message.quickreply.QuickReplyItem;
-import com.linecorp.bot.model.message.template.*;
 import com.linecorp.bot.model.profile.UserProfileResponse;
 import com.slgerkamp.psychological.safety.game.application.config.WebSocketConfig;
 import com.slgerkamp.psychological.safety.game.application.controller.GameController;
@@ -30,13 +27,13 @@ import com.slgerkamp.psychological.safety.game.infra.message.LineMessage;
 import com.slgerkamp.psychological.safety.game.infra.model.*;
 import com.slgerkamp.psychological.safety.game.infra.utils.CommonUtils;
 import com.slgerkamp.psychological.safety.game.infra.utils.QrCodeGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.HtmlUtils;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -46,8 +43,7 @@ import java.util.stream.Collectors;
 @Component
 public class StageService {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GameController.class);
-
+    private static final Logger log = LoggerFactory.getLogger(GameController.class);
 
     @Autowired
     private StageRepository stageRepository;
@@ -136,27 +132,6 @@ public class StageService {
         }
     }
 
-    public void getStagesParticipantsWanted(String userId) {
-        // check whether sender already join a stage or not
-        if (!userAlreadyJoinedStage(userId)) {
-
-            // fetch stagesParticipantsWanted
-            final List<Stage> stageList = stageRepository.findParticipantsWantedStageList(PageRequest.of(0, 10));
-            log.debug(stageList.stream().map(n -> n.id).collect(Collectors.joining(",")));
-            // send them to sender and ask which stage sender want to join
-            if (stageList.size() > 0) {
-                TemplateMessage templateMessage = createParticipantsWantedStageList(stageList);
-                lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(templateMessage));
-            } else {
-                String msg = messageSource.getMessage(
-                        "bot.stage.join.request.no.stage",
-                        null,
-                        Locale.JAPANESE);
-                lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(new TextMessage(msg)));
-            }
-        }
-    }
-
     public Boolean requestToJoinStageForWeb(String stageId, final OAuth2Authentication oAuth2Authentication, String password) {
         Boolean isSuccess = false;
         // already checked whether sender already join a stage or not
@@ -171,62 +146,6 @@ public class StageService {
             }
         }
         return isSuccess;
-    }
-
-    public void requestToJoinStage(String userId, String stageId) {
-        // check whether sender already join a stage or not
-        if (!userAlreadyJoinedStage(userId)) {
-
-            // fetch stagesParticipantsWanted
-            Optional<Stage> optionalStage = getParticipantsWantedStage(stageId);
-
-            if (optionalStage.isPresent()) {
-                addTempMember(userId, stageId);
-                final String joinConfirm = messageSource.getMessage(
-                        "bot.stage.join.confirm",
-                        new Object[]{stageId},
-                        Locale.JAPANESE);
-                lineMessage.multicast(Collections.singleton(userId),
-                        Collections.singletonList(new TextMessage(joinConfirm)));
-            } else {
-                final String cannotJoinForSomeReason = messageSource.getMessage(
-                        "bot.stage.join.confirm.error",
-                        null,
-                        Locale.JAPANESE);
-                lineMessage.multicast(Collections.singleton(userId),
-                        Collections.singletonList(new TextMessage(cannotJoinForSomeReason)));
-            }
-        }
-    }
-
-    public void confirmPasswordToJoinAStage(String userId, String password) {
-        if (password.length() != 6) {
-        } else {
-            // check whether sender already join a stage or not
-            if (!userAlreadyJoinedStage(userId)) {
-                // check the stage that sender wants to join
-                Optional<StageMember> optionalStageMember = getApplyingStage(userId);
-
-                if (optionalStageMember.isPresent()) {
-                    StageMember stageMember = optionalStageMember.get();
-                    Optional<Stage> optionalStage = getParticipantsWantedStage(stageMember.stageId);
-
-                    if (optionalStage.isPresent()) {
-                        Stage stage = optionalStage.get();
-                        if (stage.password.equals(password)) {
-                            addMemberAndSendMessageToMember(userId, stage);
-                        } else {
-                            final String wrongPassword = messageSource.getMessage(
-                                    "bot.stage.input.password.wrong.password",
-                                    new Object[]{stage.id},
-                                    Locale.JAPANESE);
-                            lineMessage.multicast(Collections.singleton(userId),
-                                    Collections.singletonList(new TextMessage(wrongPassword)));
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public void requestToStartStage(String userId) {
@@ -744,7 +663,7 @@ public class StageService {
         return stageMemberList;
     }
 
-    public List<StageMember> getStageMemberForSisplayStageMember(String stageId) {
+    public List<StageMember> getStageMemberForDisplayStageMember(String stageId) {
         List<String> statusList = Arrays.asList(
                 StageMemberStatus.JOINING.name(),
                 StageMemberStatus.TERMINATED.name());
@@ -1049,56 +968,11 @@ public class StageService {
         return Optional.empty();
     }
 
-    private TemplateMessage createParticipantsWantedStageList(List<Stage> stageList) {
-        List<CarouselColumn> carouselColumnList = new ArrayList<>();
-        for(Stage stage : stageList){
-
-            final String carouselTitle = messageSource.getMessage(
-                    "bot.stage.join.request.title",
-                    new Object[]{stage.id},
-                    Locale.JAPANESE);
-            final String carouselText = messageSource.getMessage(
-                    "bot.stage.join.request.text",
-                    null,
-                    Locale.JAPANESE);
-            final String postbackLabel = messageSource.getMessage(
-                    "bot.stage.join.request.button.label",
-                    null,
-                    Locale.JAPANESE);
-            final String postbackText = messageSource.getMessage(
-                    "bot.stage.join.request.button.text",
-                    new Object[]{stage.id},
-                    Locale.JAPANESE);
-            final String postbackData = PostBackKeyName.ACTION.keyName + "="
-                    + PostBackAction.REQUEST_TO_JOIN_STAGE.name() + "&"
-                    + PostBackKeyName.STAGE.keyName + "=" + stage.id;
-
-            final CarouselColumn carouselColumn = new CarouselColumn(
-                    null, carouselTitle, carouselText, Arrays.asList(
-                    new PostbackAction(postbackLabel, postbackData, postbackText)));
-
-            carouselColumnList.add(carouselColumn);
-        }
-
-        final String altText = messageSource.getMessage(
-                "bot.stage.join.request.altText",
-                null,
-                Locale.JAPANESE);
-
-        return new TemplateMessage(altText, new CarouselTemplate(carouselColumnList));
-    }
-
-
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
 ////////////////  stage member  //////////////////////////
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
-
-    private void addMemberAndSendMessageToMember(String userId, Stage stage) {
-        addMember(userId, stage.id);
-        sendMessageForJoiningMember_doNotCallDirectly(userId, stage);
-    }
 
     private void addMember(String userId, String stageId) {
         final UserProfileResponse userProfileResponse = lineMessage.getProfile(userId);
@@ -1192,23 +1066,6 @@ public class StageService {
             lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(new TextMessage(alreadyJoined)));
         }
         return optionalStageMember.isPresent();
-    }
-
-    private Optional<StageMember> getApplyingStage(String userId) {
-        List<StageMember> userStageMemberList =
-                stageMemberRepository.findByUserIdAndStatus(userId, StageMemberStatus.APPLY_TO_JOIN.name());
-        Optional<StageMember> optionalStageMember = Optional.empty();
-        if (userStageMemberList.size() > 0 ) {
-            optionalStageMember = Optional.of(userStageMemberList.get(0));
-        }
-        if (! optionalStageMember.isPresent()) {
-            final String applyingStageNotFound = messageSource.getMessage(
-                    "bot.stage.input.password.applying.stage.not.found",
-                    null,
-                    Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(new TextMessage(applyingStageNotFound)));
-        }
-        return optionalStageMember;
     }
 
     private void publishToStompClient(String stageId){

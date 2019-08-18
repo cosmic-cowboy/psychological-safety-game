@@ -19,8 +19,6 @@ public interface StageMemberRepository extends JpaRepository<StageMember, String
 
     List<StageMember> findByStageId(String stageId);
 
-    Optional<StageMember> findFirstByStageIdOrderByCreateDateDesc(String stageId);
-
     @Transactional
     void deleteByUserIdAndStatusIn(String userId, List<String> statusList);
 

@@ -1,49 +1,24 @@
 package com.slgerkamp.psychological.safety.game.application.controller;
 
-import com.linecorp.bot.model.event.MessageEvent;
 import com.linecorp.bot.model.event.PostbackEvent;
-import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
-import com.slgerkamp.psychological.safety.game.infra.model.StageMember;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @LineMessageHandler
 public class GameController {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GameController.class);
+    private static final Logger log = LoggerFactory.getLogger(GameController.class);
 
     @Autowired
     private StageService stageService;
-
-    @EventMapping
-    public void handleTextMessageEvent(MessageEvent<TextMessageContent> event) {
-
-        final String userId = event.getSource().getUserId();
-        final String message = event.getMessage().getText();
-
-        final Optional<StageMember> optionalStageMember = stageService.getStageMemberForEachUser(userId);
-
-        if (optionalStageMember.isPresent()) {
-            StageMemberStatus stageMemberStatus =
-                    StageMemberStatus.valueOf(optionalStageMember.get().status);
-            switch (stageMemberStatus) {
-                case APPLY_TO_JOIN :
-                    stageService.confirmPasswordToJoinAStage(userId, message);
-                    break;
-                case JOINING:
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
 
     @EventMapping
     public void handlePostbackEvent(PostbackEvent event) {
@@ -58,15 +33,6 @@ public class GameController {
             switch (postBackAction) {
                 case CREATE:
                     stageService.createStageTable(userId);
-                    break;
-
-                case GET_STAGES:
-                    stageService.getStagesParticipantsWanted(userId);
-                    break;
-
-                case REQUEST_TO_JOIN_STAGE:
-                    String stageId_REQUEST_TO_JOIN_STAGE = map.get(PostBackKeyName.STAGE.keyName);
-                    stageService.requestToJoinStage(userId, stageId_REQUEST_TO_JOIN_STAGE);
                     break;
 
                 case REQUEST_TO_START_STAGE:
