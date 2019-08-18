@@ -20,6 +20,17 @@
             <div class="row justify-content-center">
                 <div class="col-lg-11 col-xl-10">
                     <div class="page-header">
+                        <h4 class="text-center" th:text="${stageTitle}"></h4>
+                        <div class="d-flex justify-content-center">
+                            <ul class="avatars">
+                                <li th:each="stageMember : ${stageMemberList}">
+                                    <a href="#" data-toggle="tooltip" data-placement="top" th:title="${stageMember.userName}">
+                                        <img th:alt="${stageMember.userName}" class="avatar" th:src="${stageMember.pictureUrl}">
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
                         <div id="stageIntroduction" th:if="${stageNotStartedYet}" class="page-content">
                             <h1 class="text-center" th:text="#{web.stage.participate.step}"></h1>
                             <div class="content-list">
@@ -76,41 +87,39 @@
                                         <p th:text="#{web.stage.participate.step.caution}"></p>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
-
-                    <h4 class="text-center" th:text="${stageTitle}"></h4>
                     </div>
-                        <div class="d-flex align-items-center">
-                            <ul class="avatars">
-                                <li th:each="stageMember : ${stageMemberList}">
-                                    <a href="#" data-toggle="tooltip" data-placement="top" th:title="${stageMember.userName}">
-                                        <img th:alt="${stageMember.userName}" class="avatar" th:src="${stageMember.pictureUrl}">
-                                    </a>
-                                </li>
-                            </ul>
+                </div>
+                <hr />
+                <div class="page-content col-lg-8 col-xl-8">
+                    <div th:each="entry : ${roundCardForViewMap}" th:title="${entry.key}" class="content-list">
+                        <div class="content-list-head row">
+                            <h3 th:text="'Round : ' + (${entryStat.size} - ${entryStat.index})"></h3>
                         </div>
-                    </div>
-                    <hr />
-                    <div class="page-content col-lg-11 col-xl-10">
-                        <div th:each="entry : ${roundCardForViewMap}" th:title="${entry.key}" class="content-list">
-                            <div class="content-list-head row">
-                                <h3 th:text="'Round : ' + (${entryStat.size} - ${entryStat.index})"></h3>
-                            </div>
-                            <div class="content-list-body row">
-                                <div th:each="roundCardForView : ${entry.value}" class="col-lg-3">
-                                    <div th:classappend="${(roundCardForView.type == 'SITUATION' ? 'bg-info text-white' : '') + (roundCardForView.type == 'THEME' ? 'bg-success text-white' : '')}" class="card text-center round-card">
-                                        <div th:text="${roundCardForView.typeForDisplay}" class="card-header"></div>
-                                        <div class="card-body">
-                                            <p th:text="${roundCardForView.title}" class="card-title round-card-title text-warning"></p>
-                                            <p th:text="${roundCardForView.text}" class="card-text round-card-text"></p>
+                        <div class="msg_content-list-body">
+                            <div class="msg_content-list-body-mask">
+                                <div th:each="roundCardForView : ${entry.value}">
+                                    <div th:if="${(roundCardForView.type != 'COMMENT')}" class="row justify-content-start ">
+                                        <div class="d-flex mb-4">
+                                            <div class="img_cont_msg">
+                                                <a href="#" data-toggle="tooltip" data-placement="top" th:title="${(__${roundCardForView.userId}__).userName}">
+                                                    <img th:src="${(__${roundCardForView.userId}__).pictureUrl}" class="avatar-mini" th:alt="${(__${roundCardForView.userId}__).userName}">
+                                                </a>
+                                            </div>
+                                            <div th:text="${roundCardForView.text}" class="msg_cotainer">
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="media media-member">
-                                        <img th:src="${(__${roundCardForView.userId}__).pictureUrl}" class="avatar-mini mr-3" th:alt="${(__${roundCardForView.userId}__).userName}">
-                                        <div class="media-body">
-                                            <p th:text=${(__${roundCardForView.userId}__).userName} class="mb-0"></p>
+                                    <div th:if="${(roundCardForView.type == 'COMMENT')}" class="row justify-content-end">
+                                        <div class="d-flex justify-content-start mb-4">
+                                            <div th:text="${roundCardForView.text}" class="msg_cotainer_send">
+                                            </div>
+                                            <div class="img_cont_msg_send">
+                                                <a href="#" data-toggle="tooltip" data-placement="top" th:title="${(__${roundCardForView.userId}__).userName}">
+                                                    <img th:src="${(__${roundCardForView.userId}__).pictureUrl}" class="avatar-mini" th:alt="${(__${roundCardForView.userId}__).userName}">
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

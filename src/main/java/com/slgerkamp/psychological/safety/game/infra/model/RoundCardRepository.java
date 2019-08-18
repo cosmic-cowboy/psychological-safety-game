@@ -9,7 +9,7 @@ public interface RoundCardRepository extends JpaRepository<RoundCard, String> {
 
     List<RoundCard> findByRoundIdInAndCardIdStartingWith(List<Long> roundIds, String cardId);
 
-    List<RoundCard> findByRoundIdIn(List<Long> roundIds);
+    List<RoundCard> findByRoundIdInOrderByCreateDateDesc(List<Long> roundIds);
 
     Optional<RoundCard> findFirstByRoundIdInOrderByCreateDateDesc(List<Long> roundIds);
 }
