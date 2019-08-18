@@ -133,3 +133,46 @@ hr {
 .round-card-text {
     height: 80px;
 }
+
+
+.msg_content-list-body {
+    border-radius: 20px!important;
+    background: linear-gradient(to right, rgb(145, 234, 228), rgb(134, 168, 231), rgb(127, 127, 213));
+    margin-bottom: 10px;
+    color: #212529;
+}
+.msg_content-list-body-mask {
+    border-radius: 20px!important;
+    background-color: rgba(0,0,0,0.4) !important;
+    padding: 25px 25px 1px 25px;
+}
+
+.msg_cotainer_send {
+    margin-top: auto;
+    margin-bottom: auto;
+    margin-right: 10px;
+    margin-left: 100px;
+    border-radius: 25px;
+    background-color: #78e08f;
+    padding: 10px 20px;
+    position: relative;
+}
+
+.img_cont_msg_send {
+    margin-right: 10px;
+}
+
+.msg_cotainer {
+    margin-top: auto;
+    margin-bottom: auto;
+    margin-right: 100px;
+    margin-left: 10px;
+    border-radius: 25px;
+    background-color: #82ccdd;
+    padding: 10px 20px;
+    position: relative;
+}
+
+.img_cont_msg {
+    margin-left: 10px;
+}

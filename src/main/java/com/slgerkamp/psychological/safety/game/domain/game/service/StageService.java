@@ -627,7 +627,7 @@ public class StageService {
 
         if (roundList.size() > 0) {
             final List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
-            final List<RoundCard> roundCardList = roundCardRepository.findByRoundIdIn(roundIdList);
+            final List<RoundCard> roundCardList = roundCardRepository.findByRoundIdInOrderByCreateDateDesc(roundIdList);
             final List<String> cardIdList = roundCardList.stream().map(r -> r.cardId).collect(Collectors.toList());
             final List<Card> cardList = cardRepository.findByIdIn(cardIdList);
 
