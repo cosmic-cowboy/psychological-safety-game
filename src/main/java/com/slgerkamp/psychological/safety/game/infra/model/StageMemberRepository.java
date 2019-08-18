@@ -11,8 +11,6 @@ public interface StageMemberRepository extends JpaRepository<StageMember, String
 
     List<StageMember> findByUserIdAndStatus(String userId, String status);
 
-    List<StageMember> findByUserIdAndStatusAndStageId(String userId, String status, String stageId);
-
     List<StageMember> findByUserIdAndStatusIn(String userId, List<String> statusList);
 
     List<StageMember> findByStageIdAndStatusIn(String stageId, List<String> statusList);

@@ -4,7 +4,8 @@ public enum PostBackKeyName {
     ACTION("action"),
     STAGE("stage"),
     ROUND("round"),
-    CARD("card");
+    CARD("card"),
+    THEME_ANSWER("theme_answer");
 
     public final String keyName;
 

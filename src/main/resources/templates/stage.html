@@ -100,7 +100,9 @@
                         <div class="msg_content-list-body">
                             <div class="msg_content-list-body-mask">
                                 <div th:each="roundCardForView : ${entry.value}">
-                                    <div th:if="${(roundCardForView.type != 'COMMENT')}" class="row justify-content-start ">
+
+                                    <div th:if="${(roundCardForView.type == 'SITUATION') || (roundCardForView.type == 'THEME' && roundCardForView.userId != 'defaultIcon')}"
+                                         class="row justify-content-start ">
                                         <div class="d-flex mb-4">
                                             <div class="img_cont_msg">
                                                 <a href="#" data-toggle="tooltip" data-placement="top" th:title="${(__${roundCardForView.userId}__).userName}">
@@ -111,6 +113,7 @@
                                             </div>
                                         </div>
                                     </div>
+
                                     <div th:if="${(roundCardForView.type == 'COMMENT')}" class="row justify-content-end">
                                         <div class="d-flex justify-content-start mb-4">
                                             <div th:text="${roundCardForView.text}" class="msg_cotainer_send">
@@ -122,6 +125,20 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    <div th:if="${(roundCardForView.type == 'THEME' && roundCardForView.userId == 'defaultIcon')}"
+                                         class="row justify-content-end">
+                                        <div class="d-flex justify-content-start mb-4">
+                                            <div th:text="${roundCardForView.text}" class="msg_cotainer_send bg-secondary text-white">
+                                            </div>
+                                            <div class="img_cont_msg_send">
+                                                <a href="#" data-toggle="tooltip" data-placement="top" title="psychological safety">
+                                                    <img src="../img/group.png" class="avatar-mini" alt="psychological safety">
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>

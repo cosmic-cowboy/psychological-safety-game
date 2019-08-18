@@ -4,6 +4,8 @@ import com.slgerkamp.psychological.safety.game.application.config.WebSocketConfi
 import com.slgerkamp.psychological.safety.game.application.form.StageJoinForm;
 import com.slgerkamp.psychological.safety.game.application.model.RoundCardForView;
 import com.slgerkamp.psychological.safety.game.domain.game.StageStatus;
+import com.slgerkamp.psychological.safety.game.domain.game.service.RoundService;
+import com.slgerkamp.psychological.safety.game.domain.game.service.StageMemberService;
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
 import com.slgerkamp.psychological.safety.game.infra.model.Stage;
 import com.slgerkamp.psychological.safety.game.infra.model.StageMember;
@@ -31,6 +33,10 @@ public class WebController {
 
     @Autowired
     private StageService stageService;
+    @Autowired
+    private StageMemberService stageMemberService;
+    @Autowired
+    private RoundService roundService;
 
     @Autowired
     private MessageSource messageSource;
@@ -41,7 +47,7 @@ public class WebController {
                         final OAuth2Authentication oAuth2Authentication){
         // (common all methods in this class) get stage info and check stageMember or not
         Stage stage = stageService.getStage(stageId);
-        List<StageMember> stageMemberList = stageService.getStageMemberForDisplayStageMember(stage.id);
+        List<StageMember> stageMemberList = stageMemberService.getStageMemberForDisplayStageMember(stage.id);
         boolean isMember = isMember(stageMemberList, oAuth2Authentication);
 
         if (isMember) {
@@ -59,7 +65,7 @@ public class WebController {
                                 final OAuth2Authentication oAuth2Authentication){
         // (common all methods in this class) get stage info and check stageMember or not
         Stage stage = stageService.getStage(stageId);
-        List<StageMember> stageMemberList = stageService.getStageMemberForStage(stage.id);
+        List<StageMember> stageMemberList = stageMemberService.getStageMemberForStage(stage.id);
         boolean isMember = isMember(stageMemberList, oAuth2Authentication);
 
         if (isMember) {
@@ -78,7 +84,7 @@ public class WebController {
                                   final OAuth2Authentication oAuth2Authentication) {
         // (common all methods in this class) get stage info and check stageMember or not
         Stage stage = stageService.getStage(stageId);
-        List<StageMember> stageMemberList = stageService.getStageMemberForStage(stage.id);
+        List<StageMember> stageMemberList = stageMemberService.getStageMemberForStage(stage.id);
         boolean isMember = isMember(stageMemberList, oAuth2Authentication);
 
         if (isMember) {
@@ -121,7 +127,7 @@ public class WebController {
     }
 
     private void createModelForStage(Model model, Stage stage, List<StageMember> stageMemberList) {
-        Map<Long, List<RoundCardForView>> roundCardForViewMap = stageService.getRoundCards(stage.id);
+        Map<Long, List<RoundCardForView>> roundCardForViewMap = roundService.getRoundCards(stage.id);
         String subscriptionUrl = WebSocketConfig.DESTINATION_STAGE_PREFIX + "/" + stage.id;
         boolean stageNotStartedYet = stage.status.equals(StageStatus.PARTICIPANTS_WANTED.name());
 

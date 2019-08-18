@@ -1,16 +1,21 @@
 package com.slgerkamp.psychological.safety.game.application.controller;
 
+import com.linecorp.bot.model.event.MessageEvent;
 import com.linecorp.bot.model.event.PostbackEvent;
+import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
+import com.slgerkamp.psychological.safety.game.domain.game.service.RoundService;
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
+import com.slgerkamp.psychological.safety.game.infra.model.Round;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @LineMessageHandler
 public class GameController {
@@ -19,6 +24,13 @@ public class GameController {
 
     @Autowired
     private StageService stageService;
+    @Autowired
+    private RoundService roundService;
+
+    @EventMapping
+    public void handleTextMessageEvent(MessageEvent<TextMessageContent> event) {
+        log.debug("event action : " + event.getMessage());
+    }
 
     @EventMapping
     public void handlePostbackEvent(PostbackEvent event) {
@@ -45,10 +57,20 @@ public class GameController {
                     break;
 
                 case SET_ROUND_CARD:
-                    String stageId = map.get(PostBackKeyName.STAGE.keyName);
-                    String roundId = map.get(PostBackKeyName.ROUND.keyName);
-                    String cardId = map.get(PostBackKeyName.CARD.keyName);
-                    stageService.setRoundCard(userId, Long.parseLong(roundId), cardId);
+                    stageService.setRoundCard(
+                            map.get(PostBackKeyName.STAGE.keyName),
+                            userId,
+                            Long.parseLong(map.get(PostBackKeyName.ROUND.keyName)),
+                            map.get(PostBackKeyName.CARD.keyName));
+                    break;
+
+                case SET_THEME_CARD:
+                    stageService.setThemeCard(
+                            map.get(PostBackKeyName.STAGE.keyName),
+                            userId,
+                            Long.parseLong(map.get(PostBackKeyName.ROUND.keyName)),
+                            map.get(PostBackKeyName.CARD.keyName),
+                            map.get(PostBackKeyName.THEME_ANSWER.keyName));
                     break;
 
                 case REQUEST_TO_FINISH_STAGE:
