@@ -1,9 +1,11 @@
 package com.slgerkamp.psychological.safety.game.domain.game.service;
 
 
+import com.linecorp.bot.model.action.MessageAction;
 import com.linecorp.bot.model.action.PostbackAction;
 import com.linecorp.bot.model.action.URIAction;
 import com.linecorp.bot.model.message.FlexMessage;
+import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TemplateMessage;
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.message.flex.component.Box;
@@ -16,6 +18,8 @@ import com.linecorp.bot.model.message.flex.unit.FlexAlign;
 import com.linecorp.bot.model.message.flex.unit.FlexFontSize;
 import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
+import com.linecorp.bot.model.message.quickreply.QuickReply;
+import com.linecorp.bot.model.message.quickreply.QuickReplyItem;
 import com.linecorp.bot.model.message.template.*;
 import com.linecorp.bot.model.profile.UserProfileResponse;
 import com.slgerkamp.psychological.safety.game.application.config.WebSocketConfig;
@@ -454,13 +458,21 @@ public class StageService {
                     } else {
                         //
                         List<Card> themeList = cardRepository.findByTypeOrderByCreateDate(CardType.THEME.name());
-                        createCard(round.stageId, round.id, themeList, nextUserId);
                         final String nextYourTurnMessage = messageSource.getMessage(
                                 "bot.round.set.round.card.for.theme.next.your.turn",
                                 null,
                                 Locale.JAPANESE);
+                        final String question = messageSource.getMessage(
+                                "bot.round.set.round.card.for.theme.question",
+                                new Object[]{themeList.get(0).text},
+                                Locale.JAPANESE);
+
+                        final QuickReply quickReply = createThemeQuickReply();
                         lineMessage.multicast(Collections.singleton(nextUserId),
-                                Collections.singletonList(new TextMessage(nextYourTurnMessage)));
+                                Arrays.<Message>asList(
+                                        new TextMessage(nextYourTurnMessage),
+                                        TextMessage.builder().text(question).quickReply(quickReply).build()
+                                ));
                     }
                 }
 
@@ -609,6 +621,69 @@ public class StageService {
         return new FlexMessage(altText, bubble);
     }
 
+    private QuickReply createThemeQuickReply() {
+        final String condition1 = messageSource.getMessage(
+                "card.future.team.condition.1",
+                null,
+                Locale.JAPANESE);
+        final String condition2 = messageSource.getMessage(
+                "card.future.team.condition.2",
+                null,
+                Locale.JAPANESE);
+        final String condition3 = messageSource.getMessage(
+                "card.future.team.condition.3",
+                null,
+                Locale.JAPANESE);
+        final String condition4 = messageSource.getMessage(
+                "card.future.team.condition.4",
+                null,
+                Locale.JAPANESE);
+        final String condition5 = messageSource.getMessage(
+                "card.future.team.condition.5",
+                null,
+                Locale.JAPANESE);
+
+        final List<QuickReplyItem> items = Arrays.<QuickReplyItem>asList(
+                QuickReplyItem.builder()
+                        .action(PostbackAction.builder()
+                                .label(condition1)
+                                .text("PostbackAction clicked")
+                                .data("{PostbackAction: true}")
+                                .build())
+                        .build(),
+                QuickReplyItem.builder()
+                        .action(PostbackAction.builder()
+                                .label(condition2)
+                                .text("PostbackAction clicked")
+                                .data("{PostbackAction: true}")
+                                .build())
+                        .build(),
+                QuickReplyItem.builder()
+                        .action(PostbackAction.builder()
+                                .label(condition3)
+                                .text("PostbackAction clicked")
+                                .data("{PostbackAction: true}")
+                                .build())
+                        .build(),
+                QuickReplyItem.builder()
+                        .action(PostbackAction.builder()
+                                .label(condition4)
+                                .text("PostbackAction clicked")
+                                .data("{PostbackAction: true}")
+                                .build())
+                        .build(),
+                QuickReplyItem.builder()
+                        .action(PostbackAction.builder()
+                                .label(condition5)
+                                .text("PostbackAction clicked")
+                                .data("{PostbackAction: true}")
+                                .build())
+                        .build()
+
+        );
+        final QuickReply quickReply = QuickReply.items(items);
+        return quickReply;
+    }
 
 //////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////
