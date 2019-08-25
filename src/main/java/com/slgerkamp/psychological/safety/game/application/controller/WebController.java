@@ -123,6 +123,7 @@ public class WebController {
 
     private void createModelForStage(Model model, Stage stage, List<StageMember> stageMemberList) {
         Map<Long, List<RoundCardForView>> roundCardForViewMap = roundService.getRoundCards(stage.id);
+        Map<String, Map<String, List<String>>> roundRetrospectiveMap = roundService.getRoundRetrospective(stage.id);
         String subscriptionUrl = WebSocketConfig.DESTINATION_STAGE_PREFIX + "/" + stage.id;
         boolean stageNotStartedYet = stage.status.equals(StageStatus.PARTICIPANTS_WANTED.name());
 
@@ -135,8 +136,10 @@ public class WebController {
         model.addAttribute("stageTitle", webStageTitlePrefix + stage.id);
         model.addAttribute("stageQRcode", "/stage/" + stage.id + "/qrcode");
         model.addAttribute("stagePassword", stage.password);
+        model.addAttribute("stageStatus", stage.status);
         model.addAttribute("stageMemberList", stageMemberList);
         model.addAttribute("roundCardForViewMap", roundCardForViewMap);
+        model.addAttribute("roundRetrospectiveMap", roundRetrospectiveMap);
         model.addAttribute("subscriptionUrl", subscriptionUrl);
 
         for(StageMember stageMember : stageMemberList){

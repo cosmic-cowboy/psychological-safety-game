@@ -228,6 +228,7 @@ public class StageService {
                     Locale.JAPANESE);
             lineMessage.multicast(memberSet,
                     Collections.singletonList(new TextMessage(successMessage)));
+            notificationService.publishToStompClient(stageId);
         }
     }
 

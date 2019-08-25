@@ -20,6 +20,7 @@
             <div class="row justify-content-center">
                 <div class="col-lg-11 col-xl-10">
                     <div class="page-header">
+                        <!-- Stage info starts-->
                         <h4 class="text-center" th:text="${stageTitle}"></h4>
                         <div class="d-flex justify-content-center">
                             <ul class="avatars">
@@ -30,7 +31,8 @@
                                 </li>
                             </ul>
                         </div>
-
+                        <!-- Stage info ends -->
+                        <!-- Introduction starts -->
                         <div id="stageIntroduction" th:if="${stageNotStartedYet}" class="page-content">
                             <h1 class="text-center" th:text="#{web.stage.participate.step}"></h1>
                             <div class="content-list">
@@ -89,10 +91,37 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- Introduction ends -->
                     </div>
                 </div>
                 <hr />
                 <div class="page-content col-lg-8 col-xl-8">
+                    <!-- round retrospective starts -->
+                    <div th:if="${(stageStatus == 'END_GAME')}" class="page-content">
+                        <div th:each="entry : ${roundRetrospectiveMap}" th:title="${entry.key}">
+                            <h5 class="text-center" th:text="${entry.key}"></h5>
+                            <div class="d-flex retrospective-text">
+                                <div class="p-2 condition-1 width-20" th:text="#{card.future.team.condition.1}"></div>
+                                <div class="p-2 condition-2 width-20" th:text="#{card.future.team.condition.2}"></div>
+                                <div class="p-2 condition-3 width-20" th:text="#{card.future.team.condition.3}"></div>
+                                <div class="p-2 condition-4 width-20" th:text="#{card.future.team.condition.4}"></div>
+                                <div class="p-2 condition-5 width-20" th:text="#{card.future.team.condition.5}"></div>
+                            </div>
+                            <div class="d-flex justify-content-center retrospective-avatars-area">
+                                <div th:each="roundRetrospective : ${entry.value}" class="p-2 width-20">
+                                    <ul class="avatars retrospective-avatars">
+                                        <li th:each="userId : ${roundRetrospective.value}">
+                                            <a href="#" data-toggle="tooltip" data-placement="top" th:title="${(__${userId}__).userName}">
+                                                <img th:src="${(__${userId}__).pictureUrl}" class="avatar-mini" th:alt="${(__${userId}__).userName}">
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- round retrospective starts -->
+                    <!-- round info starts -->
                     <div th:each="entry : ${roundCardForViewMap}" th:title="${entry.key}" class="content-list">
                         <div class="content-list-head row">
                             <h3 th:text="'Round : ' + (${entryStat.size} - ${entryStat.index})"></h3>
@@ -143,6 +172,7 @@
                             </div>
                         </div>
                     </div>
+                    <!-- round info ends -->
                 </div>
             </div>
         </div>

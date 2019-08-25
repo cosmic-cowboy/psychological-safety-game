@@ -112,6 +112,32 @@ public class RoundService {
         return roundCardMap;
     }
 
+    public Map<String, Map<String, List<String>>> getRoundRetrospective(String stageId) {
+        List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
+        Map<String, Map<String, List<String>>> roundRetrospectiveMap = new TreeMap<>();
+        if (roundList.size() > 0) {
+            final List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
+            List<RoundRetrospective> roundRetrospectiveList =
+                    roundRetrospectiveRepository.findByRoundIdInOrderByCreateDateDesc(roundIdList);
+            List<Card> themeList = cardRepository.findByTypeOrderByCreateDate(CardType.THEME.name());
+
+            for(Card card : themeList) {
+                Map<String, List<String>> answerMap = new TreeMap<>();
+                for(int i = 1; i < 6; i++) {
+                    String answer = String.valueOf(i);
+                    List<String> userIdList =
+                            roundRetrospectiveList
+                                    .stream()
+                                    .filter(s -> s.cardId.equals(card.id) && s.answer.equals(answer))
+                                    .map(s -> s.userId)
+                                    .collect(Collectors.toList());
+                    answerMap.put(answer, userIdList);
+                }
+                roundRetrospectiveMap.put(card.text, answerMap);
+            }
+        }
+        return roundRetrospectiveMap;
+    }
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 ///////////////////  default method  //////////////////////
@@ -133,17 +159,20 @@ public class RoundService {
             if (round.currentTurnNumber == turnNumber) {
                 List<StageMember> stageMemberList = stageMemberRepository.findByStageId(round.stageId);
 
+                // set round card
                 if (!optinalThemeAnswer.isPresent()) {
                     storeRoundCardAndSendMessage(userId, roundId, card, round, turnNumber);
                     prepareForNextMember(card, round, stageMemberList);
+                    notificationService.publishToStompClient(round.stageId);
 
+                // set theme card
                 } else {
                     String themeAnswer = optinalThemeAnswer.get();
                     storeThemeCard(userId, card, round, themeAnswer);
+                    notificationService.publishToStompClient(round.stageId);
                     return createThemeMessageAndSendMessage(round, userId);
                 }
 
-                notificationService.publishToStompClient(round.stageId);
             } else {
                 final String notYourTurnMessage = messageSource.getMessage(
                         "bot.round.set.round.card.not.your.turn",
@@ -473,7 +502,7 @@ public class RoundService {
                 roundRetrospectiveRepository.findByRoundIdOrderByCreateDateDesc(round.id);
         int currentRetrospectiveSize = roundRetrospectives.size();
 
-        if (themeList.size() - 1 <= currentRetrospectiveSize) {
+        if (themeList.size() <= currentRetrospectiveSize) {
             return createNewRound(round.stageId);
         }
 
