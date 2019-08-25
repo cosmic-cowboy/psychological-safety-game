@@ -6,8 +6,11 @@ import com.linecorp.bot.model.event.message.TextMessageContent;
 import com.linecorp.bot.spring.boot.annotation.EventMapping;
 import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
+import com.slgerkamp.psychological.safety.game.domain.game.service.RoundService;
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
-import com.slgerkamp.psychological.safety.game.infra.model.StageMember;
+import com.slgerkamp.psychological.safety.game.infra.model.Round;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
@@ -17,32 +20,16 @@ import java.util.Optional;
 @LineMessageHandler
 public class GameController {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GameController.class);
+    private static final Logger log = LoggerFactory.getLogger(GameController.class);
 
     @Autowired
     private StageService stageService;
+    @Autowired
+    private RoundService roundService;
 
     @EventMapping
     public void handleTextMessageEvent(MessageEvent<TextMessageContent> event) {
-
-        final String userId = event.getSource().getUserId();
-        final String message = event.getMessage().getText();
-
-        final Optional<StageMember> optionalStageMember = stageService.getStageMemberForEachUser(userId);
-
-        if (optionalStageMember.isPresent()) {
-            StageMemberStatus stageMemberStatus =
-                    StageMemberStatus.valueOf(optionalStageMember.get().status);
-            switch (stageMemberStatus) {
-                case APPLY_TO_JOIN :
-                    stageService.confirmPasswordToJoinAStage(userId, message);
-                    break;
-                case JOINING:
-                    break;
-                default:
-                    break;
-            }
-        }
+        log.debug("event action : " + event.getMessage());
     }
 
     @EventMapping
@@ -60,15 +47,6 @@ public class GameController {
                     stageService.createStageTable(userId);
                     break;
 
-                case GET_STAGES:
-                    stageService.getStagesParticipantsWanted(userId);
-                    break;
-
-                case REQUEST_TO_JOIN_STAGE:
-                    String stageId_REQUEST_TO_JOIN_STAGE = map.get(PostBackKeyName.STAGE.keyName);
-                    stageService.requestToJoinStage(userId, stageId_REQUEST_TO_JOIN_STAGE);
-                    break;
-
                 case REQUEST_TO_START_STAGE:
                     stageService.requestToStartStage(userId);
                     break;
@@ -79,10 +57,20 @@ public class GameController {
                     break;
 
                 case SET_ROUND_CARD:
-                    String stageId = map.get(PostBackKeyName.STAGE.keyName);
-                    String roundId = map.get(PostBackKeyName.ROUND.keyName);
-                    String cardId = map.get(PostBackKeyName.CARD.keyName);
-                    stageService.setRoundCard(userId, Long.parseLong(roundId), cardId);
+                    stageService.setRoundCard(
+                            map.get(PostBackKeyName.STAGE.keyName),
+                            userId,
+                            Long.parseLong(map.get(PostBackKeyName.ROUND.keyName)),
+                            map.get(PostBackKeyName.CARD.keyName));
+                    break;
+
+                case SET_THEME_CARD:
+                    stageService.setThemeCard(
+                            map.get(PostBackKeyName.STAGE.keyName),
+                            userId,
+                            Long.parseLong(map.get(PostBackKeyName.ROUND.keyName)),
+                            map.get(PostBackKeyName.CARD.keyName),
+                            map.get(PostBackKeyName.THEME_ANSWER.keyName));
                     break;
 
                 case REQUEST_TO_FINISH_STAGE:

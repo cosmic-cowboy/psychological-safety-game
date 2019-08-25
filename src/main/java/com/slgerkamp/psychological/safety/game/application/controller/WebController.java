@@ -4,9 +4,13 @@ import com.slgerkamp.psychological.safety.game.application.config.WebSocketConfi
 import com.slgerkamp.psychological.safety.game.application.form.StageJoinForm;
 import com.slgerkamp.psychological.safety.game.application.model.RoundCardForView;
 import com.slgerkamp.psychological.safety.game.domain.game.StageStatus;
+import com.slgerkamp.psychological.safety.game.domain.game.service.RoundService;
+import com.slgerkamp.psychological.safety.game.domain.game.service.StageMemberService;
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
 import com.slgerkamp.psychological.safety.game.infra.model.Stage;
 import com.slgerkamp.psychological.safety.game.infra.model.StageMember;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
@@ -25,48 +29,33 @@ import java.util.Map;
 @Controller
 public class WebController {
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(WebController.class);
+    private static final Logger log = LoggerFactory.getLogger(WebController.class);
 
     @Autowired
     private StageService stageService;
+    @Autowired
+    private StageMemberService stageMemberService;
+    @Autowired
+    private RoundService roundService;
 
     @Autowired
     private MessageSource messageSource;
 
     @GetMapping("/stage/{stageId}")
-    public String stage(@PathVariable String stageId, Model model, final OAuth2Authentication oAuth2Authentication){
+    public String stage(@PathVariable String stageId,
+                        Model model,
+                        final OAuth2Authentication oAuth2Authentication){
+        // (common all methods in this class) get stage info and check stageMember or not
         Stage stage = stageService.getStage(stageId);
-
-        // check stageMember or not
-        List<StageMember> stageMemberList = stageService.getStageMemberForSisplayStageMember(stageId);
+        List<StageMember> stageMemberList = stageMemberService.getStageMemberForDisplayStageMember(stage.id);
         boolean isMember = isMember(stageMemberList, oAuth2Authentication);
 
         if (isMember) {
-            Map<Long, List<RoundCardForView>> roundCardForViewMap = stageService.getRoundCards(stageId);
-            String subscriptionUrl = WebSocketConfig.DESTINATION_STAGE_PREFIX + "/" + stageId;
-            boolean stageNotStartedYet = stage.status.equals(StageStatus.PARTICIPANTS_WANTED.name());
-
-            final String webStageTitlePrefix = messageSource.getMessage(
-                    "web.stage.title.prefix",
-                    null,
-                    Locale.JAPANESE);
-
-            model.addAttribute("stageNotStartedYet", stageNotStartedYet);
-            model.addAttribute("stageTitle", webStageTitlePrefix + stage.id);
-            model.addAttribute("stageQRcode", "/stage/" + stage.id + "/qrcode");
-            model.addAttribute("stagePassword", stage.password);
-            model.addAttribute("stageMemberList", stageMemberList);
-            model.addAttribute("roundCardForViewMap", roundCardForViewMap);
-            model.addAttribute("subscriptionUrl", subscriptionUrl);
-
-            for(StageMember stageMember : stageMemberList){
-                model.addAttribute(stageMember.userId, stageMember);
-            }
+            createModelForStage(model, stage, stageMemberList);
             return "stage";
         } else {
-            return "redirect:/stage/" + stageId + "/join";
+            return "redirect:/stage/" + stage.id + "/join";
         }
-
     }
 
     @GetMapping("/stage/{stageId}/join")
@@ -74,18 +63,15 @@ public class WebController {
                                 StageJoinForm stageJoinForm,
                                 Model model,
                                 final OAuth2Authentication oAuth2Authentication){
+        // (common all methods in this class) get stage info and check stageMember or not
         Stage stage = stageService.getStage(stageId);
-
-        // check stageMember or not
-        List<StageMember> stageMemberList = stageService.getStageMemberForStage(stage.id);
+        List<StageMember> stageMemberList = stageMemberService.getStageMemberForStage(stage.id);
         boolean isMember = isMember(stageMemberList, oAuth2Authentication);
 
         if (isMember) {
             return "redirect:/stage/" + stage.id;
-
         } else {
-
-            createModelForJoinForm(stageId, model, stage);
+            createModelForJoinForm(model, stage);
             return "stageJoin";
         }
     }
@@ -96,13 +82,9 @@ public class WebController {
                                   BindingResult bindingResult,
                                   Model model,
                                   final OAuth2Authentication oAuth2Authentication) {
-        String password = stageJoinForm.getInputNumber();
-        log.debug("password : " + password);
-
+        // (common all methods in this class) get stage info and check stageMember or not
         Stage stage = stageService.getStage(stageId);
-
-        // check stageMember or not
-        List<StageMember> stageMemberList = stageService.getStageMemberForStage(stage.id);
+        List<StageMember> stageMemberList = stageMemberService.getStageMemberForStage(stage.id);
         boolean isMember = isMember(stageMemberList, oAuth2Authentication);
 
         if (isMember) {
@@ -110,7 +92,9 @@ public class WebController {
         } else if (bindingResult.hasErrors()) {
             // return error
         } else {
-            Boolean isSuccess = stageService.requestToJoinStageForWeb(stageId, oAuth2Authentication, password);
+            String password = stageJoinForm.getInputNumber();
+            log.debug("password : " + password);
+            Boolean isSuccess = stageService.requestToJoinStageForWeb(stage.id, oAuth2Authentication, password);
             if (isSuccess) {
                 return "redirect:/stage/" + stage.id;
             } else {
@@ -118,12 +102,16 @@ public class WebController {
                 // return error
             }
         }
-
         // return error
-        createModelForJoinForm(stageId, model, stage);
+        createModelForJoinForm(model, stage);
         return "stageJoin";
-
     }
+
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
+///////////////////////  private method  //////////////////////////
+///////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////
 
     private boolean isMember(List<StageMember> stageMemberList, final OAuth2Authentication oAuth2Authentication) {
 
@@ -138,26 +126,49 @@ public class WebController {
         return isMember;
     }
 
-    private void createModelForJoinForm(@PathVariable String stageId, Model model, Stage stage) {
+    private void createModelForStage(Model model, Stage stage, List<StageMember> stageMemberList) {
+        Map<Long, List<RoundCardForView>> roundCardForViewMap = roundService.getRoundCards(stage.id);
+        String subscriptionUrl = WebSocketConfig.DESTINATION_STAGE_PREFIX + "/" + stage.id;
+        boolean stageNotStartedYet = stage.status.equals(StageStatus.PARTICIPANTS_WANTED.name());
+
+        final String webStageTitlePrefix = messageSource.getMessage(
+                "web.stage.title.prefix",
+                null,
+                Locale.JAPANESE);
+
+        model.addAttribute("stageNotStartedYet", stageNotStartedYet);
+        model.addAttribute("stageTitle", webStageTitlePrefix + stage.id);
+        model.addAttribute("stageQRcode", "/stage/" + stage.id + "/qrcode");
+        model.addAttribute("stagePassword", stage.password);
+        model.addAttribute("stageMemberList", stageMemberList);
+        model.addAttribute("roundCardForViewMap", roundCardForViewMap);
+        model.addAttribute("subscriptionUrl", subscriptionUrl);
+
+        for(StageMember stageMember : stageMemberList){
+            model.addAttribute(stageMember.userId, stageMember);
+        }
+    }
+
+    private void createModelForJoinForm(Model model, Stage stage) {
         final String joinRequestTitle = messageSource.getMessage(
                 "web.stage.join.request.title",
-                new Object[]{stageId},
+                new Object[]{stage.id},
                 Locale.JAPANESE);
         final String joinRequest = messageSource.getMessage(
                 "web.stage.join.request",
-                new Object[]{stageId},
+                new Object[]{stage.id},
                 Locale.JAPANESE);
         final String joinRequestButton = messageSource.getMessage(
                 "web.stage.join.request.button",
-                new Object[]{stageId},
+                new Object[]{stage.id},
                 Locale.JAPANESE);
         final String joinRequestPlaceholder = messageSource.getMessage(
                 "web.stage.join.request.placeholder",
-                new Object[]{stageId},
+                new Object[]{stage.id},
                 Locale.JAPANESE);
         final String joinRequestWrongPassword = messageSource.getMessage(
                 "web.stage.join.request.wrong.password",
-                new Object[]{stageId},
+                new Object[]{stage.id},
                 Locale.JAPANESE);
 
         model.addAttribute("stageId", stage.id);
@@ -168,5 +179,4 @@ public class WebController {
         model.addAttribute("joinRequestPlaceholder", joinRequestPlaceholder);
         model.addAttribute("joinRequestWrongPassword", joinRequestWrongPassword);
     }
-
 }

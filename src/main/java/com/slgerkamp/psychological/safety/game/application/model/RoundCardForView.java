@@ -9,15 +9,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RoundCardForView {
 
-    public String id;
     public Long roundId;
     public Integer turnNumber;
     public String userId;
     public String cardId;
     public String type;
-    public String typeForDisplay;
-    public String title;
     public String text;
-    public String word;
 
 }

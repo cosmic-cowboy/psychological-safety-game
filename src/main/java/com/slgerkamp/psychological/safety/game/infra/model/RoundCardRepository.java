@@ -11,5 +11,4 @@ public interface RoundCardRepository extends JpaRepository<RoundCard, String> {
 
     List<RoundCard> findByRoundIdInOrderByCreateDateDesc(List<Long> roundIds);
 
-    Optional<RoundCard> findFirstByRoundIdInOrderByCreateDateDesc(List<Long> roundIds);
 }
