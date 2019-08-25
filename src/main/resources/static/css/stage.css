@@ -48,18 +48,28 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 }
 .condition-1 {
     background: #2f857b;
+    /* background: #435abc; */
+    /* background: #9f43bc; */
 }
 .condition-2 {
     background: #3bac9f;
+    /* background: #687bca; */
+    /* background: #b368ca; */
 }
 .condition-3 {
     background: #55c5b9;
+    /* background: #8d9bd8; */
+    /* background: #c68dd8; */
 }
 .condition-4 {
     background: #7ad3c9;
+    /* background: #b2bce6; */
+    /* background: #d9b2e6; */
 }
 .condition-5 {
     background: #a0e0d9;
+    /* background: #d8ddf3; */
+    /* background: #ecd8f3; */
 }
 .retrospective-text {
     font-size: x-small;
