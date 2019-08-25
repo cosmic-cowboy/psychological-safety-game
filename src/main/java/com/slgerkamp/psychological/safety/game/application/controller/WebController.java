@@ -9,8 +9,6 @@ import com.slgerkamp.psychological.safety.game.domain.game.service.StageMemberSe
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
 import com.slgerkamp.psychological.safety.game.infra.model.Stage;
 import com.slgerkamp.psychological.safety.game.infra.model.StageMember;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
@@ -28,8 +26,6 @@ import java.util.Map;
 
 @Controller
 public class WebController {
-
-    private static final Logger log = LoggerFactory.getLogger(WebController.class);
 
     @Autowired
     private StageService stageService;
@@ -93,7 +89,6 @@ public class WebController {
             // return error
         } else {
             String password = stageJoinForm.getInputNumber();
-            log.debug("password : " + password);
             Boolean isSuccess = stageService.requestToJoinStageForWeb(stage.id, oAuth2Authentication, password);
             if (isSuccess) {
                 return "redirect:/stage/" + stage.id;

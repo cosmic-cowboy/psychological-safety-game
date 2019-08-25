@@ -8,14 +8,12 @@ import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
 import com.slgerkamp.psychological.safety.game.domain.game.service.RoundService;
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
-import com.slgerkamp.psychological.safety.game.infra.model.Round;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @LineMessageHandler
 public class GameController {
