@@ -1,11 +1,9 @@
 package com.slgerkamp.psychological.safety.game.infra.model;
 
-import com.slgerkamp.psychological.safety.game.domain.game.StageMemberStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface StageMemberRepository extends JpaRepository<StageMember, String> {
 

@@ -8,8 +8,6 @@ import com.slgerkamp.psychological.safety.game.infra.model.Stage;
 import com.slgerkamp.psychological.safety.game.infra.model.StageMember;
 import com.slgerkamp.psychological.safety.game.infra.model.StageMemberRepository;
 import com.slgerkamp.psychological.safety.game.infra.utils.CommonUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
@@ -21,8 +19,6 @@ import java.util.*;
 
 @Component
 public class StageMemberService {
-
-    private static final Logger log = LoggerFactory.getLogger(StageMemberService.class);
 
     @Autowired
     private StageMemberRepository stageMemberRepository;
@@ -158,13 +154,10 @@ public class StageMemberService {
                 "bot.stage.input.password.correct.password",
                 new Object[]{stage.id, url},
                 Locale.JAPANESE);
-        log.debug("addMemberAndSendMessageToMember start 心理的安全性ゲームBot");
         try {
             lineMessage.multicast(Collections.singleton(userId),
                     Collections.singletonList(new TextMessage(correctPassword)));
         } catch (RuntimeException ex) {
-            log.debug("addMemberAndSendMessageToMember RuntimeException 心理的安全性ゲームBot");
-            log.debug(ex.getMessage());
         }
     }
 }

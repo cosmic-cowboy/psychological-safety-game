@@ -16,8 +16,6 @@ import com.slgerkamp.psychological.safety.game.infra.message.LineMessage;
 import com.slgerkamp.psychological.safety.game.infra.model.*;
 import com.slgerkamp.psychological.safety.game.infra.utils.CommonUtils;
 import com.slgerkamp.psychological.safety.game.infra.utils.QrCodeGenerator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.security.oauth2.provider.OAuth2Authentication;
@@ -30,8 +28,6 @@ import java.util.stream.Collectors;
 
 @Component
 public class StageService {
-
-    private static final Logger log = LoggerFactory.getLogger(StageService.class);
 
     @Autowired
     private StageRepository stageRepository;
@@ -232,6 +228,7 @@ public class StageService {
                     Locale.JAPANESE);
             lineMessage.multicast(memberSet,
                     Collections.singletonList(new TextMessage(successMessage)));
+            notificationService.publishToStompClient(stageId);
         }
     }
 
@@ -271,16 +268,13 @@ public class StageService {
         boolean areFriendsWithBot = true;
         List<String> notFriendWithBotMemberList = new ArrayList<>();
         for (StageMember s : stageMemberList) {
-            log.debug("confirmToStartStage start 心理的安全性ゲームBot");
             try {
                 lineMessage.getProfile(s.userId);
             } catch (RuntimeException ex) {
-                log.debug("confirmToStartStage RuntimeException 心理的安全性ゲームBot");
                 notFriendWithBotMemberList.add(s.userName);
             }
         }
         if (notFriendWithBotMemberList.size() > 0) {
-            log.debug("notFriendWithBotMemberList : " + notFriendWithBotMemberList);
 
             String notFriendWithBotMember = String.join("," , notFriendWithBotMemberList);
             final String notFriendWithBotMessage = messageSource.getMessage(
