@@ -114,7 +114,7 @@ public class RoundService {
 
     public Map<String, Map<String, List<String>>> getRoundRetrospective(String stageId) {
         List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
-        Map<String, Map<String, List<String>>> roundRetrospectiveMap = new TreeMap<>();
+        Map<String, Map<String, List<String>>> roundRetrospectiveMap = new LinkedHashMap<>();
         if (roundList.size() > 0) {
             final List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
             List<RoundRetrospective> roundRetrospectiveList =
@@ -122,7 +122,7 @@ public class RoundService {
             List<Card> themeList = cardRepository.findByTypeOrderByCreateDate(CardType.THEME.name());
 
             for(Card card : themeList) {
-                Map<String, List<String>> answerMap = new TreeMap<>();
+                Map<String, List<String>> answerMap = new LinkedHashMap<>();
                 for(int i = 1; i < 6; i++) {
                     String answer = String.valueOf(i);
                     List<String> userIdList =
