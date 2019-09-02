@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface RoundRetrospectiveRepository extends JpaRepository<RoundRetrospective, String> {
 
-    List<RoundRetrospective> findByRoundIdInOrderByCreateDateDesc(List<Long> roundIds);
+    List<RoundRetrospective> findByRoundIdInOrderByCreateDateAsc(List<Long> roundIds);
 
     List<RoundRetrospective> findByRoundIdOrderByCreateDateDesc(Long roundId);
 

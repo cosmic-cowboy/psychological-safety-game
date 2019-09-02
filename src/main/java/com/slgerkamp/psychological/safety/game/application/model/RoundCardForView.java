@@ -15,5 +15,6 @@ public class RoundCardForView {
     public String cardId;
     public String type;
     public String text;
+    public String createDate;
 
 }

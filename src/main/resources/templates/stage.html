@@ -97,7 +97,7 @@
                 <hr />
                 <div class="page-content col-lg-8 col-xl-8">
                     <!-- round retrospective starts -->
-                    <div th:if="${(stageStatus == 'END_GAME')}" class="page-content">
+                    <div th:if="${(stageStatus == 'END_GAME')}" class="page-content" id="top">
                         <div th:each="entry : ${roundRetrospectiveMap}" th:title="${entry.key}">
                             <h5 class="text-center" th:text="${entry.key}"></h5>
                             <div class="d-flex retrospective-text">
@@ -124,6 +124,7 @@
                     <!-- round info starts -->
                     <div th:each="entry : ${roundCardForViewMap}" th:title="${entry.key}" class="content-list">
                         <div class="content-list-head row">
+                            <span th:if="${(stageStatus != 'END_GAME' && entryStat.index == 0)}" class="scrollTopCandidate" id="0"></span>
                             <h3 th:text="'Round : ' + (${entryStat.size} - ${entryStat.index})"></h3>
                         </div>
                         <div class="msg_content-list-body">
@@ -132,6 +133,7 @@
 
                                     <div th:if="${(roundCardForView.type == 'SITUATION') || (roundCardForView.type == 'THEME' && roundCardForView.userId != 'defaultIcon')}"
                                          class="row justify-content-start ">
+                                        <span th:if="${(stageStatus != 'END_GAME' && entryStat.index == 0)}" class="scrollTopCandidate" th:id="${roundCardForView.createDate}"></span>
                                         <div class="d-flex mb-4">
                                             <div class="img_cont_msg">
                                                 <a href="#" data-toggle="tooltip" data-placement="top" th:title="${(__${roundCardForView.userId}__).userName}">
