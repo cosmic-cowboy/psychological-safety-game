@@ -59,15 +59,38 @@ public class RoundService {
 
         if (roundList.size() > 0) {
             final List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
-            final List<RoundCard> roundCardList = roundCardRepository.findByRoundIdInOrderByCreateDateDesc(roundIdList);
+            final List<RoundCard> roundCardList = roundCardRepository.findByRoundIdInOrderByCreateDateAsc(roundIdList);
             final List<RoundRetrospective> roundRetrospectiveList =
-                    roundRetrospectiveRepository.findByRoundIdInOrderByCreateDateDesc(roundIdList);
+                    roundRetrospectiveRepository.findByRoundIdInOrderByCreateDateAsc(roundIdList);
             final List<Card> cardList = cardRepository.findAll();
 
             List<RoundCardForView> roundCardForViewList = new ArrayList<>();
 
+            for (RoundCard roundCard : roundCardList) {
+                Card card = cardList.stream().filter(s -> s.id.endsWith(roundCard.cardId)).findFirst().get();
+                RoundCardForView roundCardForView = new RoundCardForView();
+                roundCardForView.roundId = roundCard.roundId;
+                roundCardForView.turnNumber = roundCard.turnNumber;
+                roundCardForView.userId = roundCard.userId;
+                roundCardForView.cardId = roundCard.cardId;
+                roundCardForView.type = card.type;
+                roundCardForView.text = card.text;
+                roundCardForView.createDate = String.valueOf(roundCard.createDate.getTime());;
+                roundCardForViewList.add(roundCardForView);
+            }
+
             for (RoundRetrospective roundRetrospective : roundRetrospectiveList) {
                 Card card = cardList.stream().filter(s -> s.id.endsWith(roundRetrospective.cardId)).findFirst().get();
+
+                RoundCardForView roundCardForViewQuestion = new RoundCardForView();
+                roundCardForViewQuestion.roundId = roundRetrospective.roundId;
+                roundCardForViewQuestion.turnNumber = 0;
+                roundCardForViewQuestion.userId = "defaultIcon";
+                roundCardForViewQuestion.cardId = roundRetrospective.cardId;
+                roundCardForViewQuestion.type = card.type;
+                roundCardForViewQuestion.text = card.text;
+                roundCardForViewQuestion.createDate = String.valueOf(roundRetrospective.createDate.getTime());
+                roundCardForViewList.add(roundCardForViewQuestion);
 
                 RoundCardForView roundCardForView = new RoundCardForView();
                 roundCardForView.roundId = roundRetrospective.roundId;
@@ -79,30 +102,11 @@ public class RoundService {
                         "card.future.team.condition." +  roundRetrospective.answer,
                         null,
                         Locale.JAPANESE);
+                roundCardForView.createDate = String.valueOf(roundRetrospective.createDate.getTime());
                 roundCardForViewList.add(roundCardForView);
-
-                RoundCardForView roundCardForViewQuestion = new RoundCardForView();
-                roundCardForViewQuestion.roundId = roundRetrospective.roundId;
-                roundCardForViewQuestion.turnNumber = 0;
-                roundCardForViewQuestion.userId = "defaultIcon";
-                roundCardForViewQuestion.cardId = roundRetrospective.cardId;
-                roundCardForViewQuestion.type = card.type;
-                roundCardForViewQuestion.text = card.text;
-                roundCardForViewList.add(roundCardForViewQuestion);
 
             }
 
-            for (RoundCard roundCard : roundCardList) {
-                Card card = cardList.stream().filter(s -> s.id.endsWith(roundCard.cardId)).findFirst().get();
-                RoundCardForView roundCardForView = new RoundCardForView();
-                roundCardForView.roundId = roundCard.roundId;
-                roundCardForView.turnNumber = roundCard.turnNumber;
-                roundCardForView.userId = roundCard.userId;
-                roundCardForView.cardId = roundCard.cardId;
-                roundCardForView.type = card.type;
-                roundCardForView.text = card.text;
-                roundCardForViewList.add(roundCardForView);
-            }
 
             Map<Long, List<RoundCardForView>> hashRoundCardMap =
                     roundCardForViewList.stream().collect(Collectors.groupingBy(r -> r.roundId));
@@ -118,7 +122,7 @@ public class RoundService {
         if (roundList.size() > 0) {
             final List<Long> roundIdList = roundList.stream().map(r -> r.id).collect(Collectors.toList());
             List<RoundRetrospective> roundRetrospectiveList =
-                    roundRetrospectiveRepository.findByRoundIdInOrderByCreateDateDesc(roundIdList);
+                    roundRetrospectiveRepository.findByRoundIdInOrderByCreateDateAsc(roundIdList);
             List<Card> themeList = cardRepository.findByTypeOrderByCreateDate(CardType.THEME.name());
 
             for(Card card : themeList) {
