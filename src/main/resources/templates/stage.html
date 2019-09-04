@@ -159,6 +159,7 @@
 
                                     <div th:if="${(roundCardForView.type == 'THEME' && roundCardForView.userId == 'defaultIcon')}"
                                          class="row justify-content-end">
+                                        <span th:if="${(stageStatus != 'END_GAME' && entryStat.index == 0)}" class="scrollTopCandidate" th:id="${roundCardForView.createDate}"></span>
                                         <div class="d-flex justify-content-start mb-4">
                                             <div th:text="${roundCardForView.text}" class="msg_cotainer_send bg-secondary text-white">
                                             </div>
