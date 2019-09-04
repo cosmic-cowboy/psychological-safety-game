@@ -25,10 +25,10 @@ $(function () {
     var scrollTopId = '#top';
     if ($('.scrollTopCandidate').length > 0 && $('.scrollTopCandidate').length < 3 ) {
         scrollTopId = '#' + $('.scrollTopCandidate')[0].id;
-    } else if ($('.scrollTopCandidate').length >= 3 && $('.scrollTopCandidate').length < 6 ) {
+    } else if ($('.scrollTopCandidate').length >= 3 && $('.scrollTopCandidate').length < 10 ) {
         scrollTopId = '#' + $('.scrollTopCandidate')[2].id;
-    } else if ($('.scrollTopCandidate').length >= 6) {
-        scrollTopId = '#' + $('.scrollTopCandidate')[4].id;
+    } else if ($('.scrollTopCandidate').length >= 10) {
+        scrollTopId = '#' + $('.scrollTopCandidate')[8].id;
     }
     if ($(scrollTopId).length > 0) {
         $("html,body").animate({scrollTop:$(scrollTopId).offset().top});
