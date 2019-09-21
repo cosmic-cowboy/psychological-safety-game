@@ -199,11 +199,9 @@ public class RoundService {
     void createRoundSettings(List<StageMember> stageMemberList) {
         // set cards for this stage
         List<Card> commentsCards = cardRepository.findByTypeOrderByCreateDate(CardType.COMMENT.name());
-        List<Card> optionCards = cardRepository.findByTypeOrderByCreateDate(CardType.OPTION.name());
 
         Collections.shuffle(stageMemberList);
         Collections.shuffle(commentsCards);
-        Collections.shuffle(optionCards);
         int count = commentsCards.size() / stageMemberList.size();
         if (count > stageMemberList.size()) {
             count = stageMemberList.size();
@@ -221,11 +219,6 @@ public class RoundService {
                         commentsCards.get((outer * count) + inner));
                 stageUserCardList.add(commentStageUserCard);
             }
-
-            StageUserCard optionStageUserCard = createStageUserCard(
-                    stageMemberUserId, stageMemberStageId,
-                    optionCards.get(outer));
-            stageUserCardList.add(optionStageUserCard);
         }
 
         stageMemberRepository.saveAll(stageMemberList);
@@ -458,8 +451,7 @@ public class RoundService {
 
     private void prepareForNextMember(Card card, Round round, List<StageMember> stageMemberList) {
         Integer nextCurrentTurnNumber;
-        if(!card.type.equals(CardType.THEME.name())
-                && !card.type.equals(CardType.OPTION.name())) {
+        if(!card.type.equals(CardType.THEME.name())) {
             if (round.currentTurnNumber == (stageMemberList.size() - 1)) {
                 nextCurrentTurnNumber = 0;
             } else {
