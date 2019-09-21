@@ -19,7 +19,6 @@ public class Card {
     @Id
     public String id;
     public String type;
-    public String title;
     public String text;
     public Timestamp createDate;
     public Timestamp updateDate;

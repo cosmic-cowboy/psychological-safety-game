@@ -396,27 +396,10 @@ public class RoundService {
                         .margin(FlexMarginSize.XXL)
                         .build();
         final Box bodyBox;
-        if(!card.title.equals("")) {
-            final Text titleComponent =
-                    Text.builder()
-                            .text(card.title)
-                            .wrap(true)
-                            .weight(Text.TextWeight.BOLD)
-                            .align(FlexAlign.CENTER)
-                            .color("#ffc107")
-                            .size(FlexFontSize.XXL)
-                            .margin(FlexMarginSize.XXL)
-                            .build();
-            bodyBox = Box.builder()
-                    .layout(FlexLayout.VERTICAL)
-                    .contents(Arrays.asList(typeComponent, separator, titleComponent, textComponent))
-                    .build();
-        } else {
-            bodyBox = Box.builder()
-                    .layout(FlexLayout.VERTICAL)
-                    .contents(Arrays.asList(typeComponent, separator, textComponent))
-                    .build();
-        }
+        bodyBox = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList(typeComponent, separator, textComponent))
+                .build();
         final Box footerBox =
                 Box.builder()
                         .layout(FlexLayout.VERTICAL)
