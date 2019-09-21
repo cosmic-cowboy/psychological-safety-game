@@ -19,6 +19,7 @@ public class Card {
     @Id
     public String id;
     public String type;
+    public String locale;
     public String text;
     public Timestamp createDate;
     public Timestamp updateDate;
