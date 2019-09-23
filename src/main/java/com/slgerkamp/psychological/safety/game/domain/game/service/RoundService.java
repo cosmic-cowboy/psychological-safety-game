@@ -42,8 +42,6 @@ public class RoundService {
     @Autowired
     private RoundRetrospectiveRepository roundRetrospectiveRepository;
     @Autowired
-    private StageUserCardRepository stageUserCardRepository;
-    @Autowired
     private CardRepository cardRepository;
 
     @Autowired
@@ -148,7 +146,7 @@ public class RoundService {
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 
-    boolean storeRoundCardOrThemeCardAndSendMessage(String userId, Long roundId, String cardId, Optional<String> optinalThemeAnswer) {
+    boolean storeRoundCardOrThemeCardAndSendMessage(String userId, Long roundId, String cardId, Optional<String> optionalThemeAnswer) {
         // check current turn
         Optional<Round> optionalRound = roundRepository.findById(roundId);
         Card card = cardRepository.findById(cardId).get();
@@ -164,17 +162,17 @@ public class RoundService {
                 List<StageMember> stageMemberList = stageMemberRepository.findByStageId(round.stageId);
 
                 // set round card
-                if (!optinalThemeAnswer.isPresent()) {
-                    storeRoundCardAndSendMessage(userId, roundId, card, round, turnNumber);
+                if (!optionalThemeAnswer.isPresent()) {
+                    storeRoundCardAndSendMessage(userId, roundId, card, turnNumber);
                     prepareForNextMember(card, round, stageMemberList);
                     notificationService.publishToStompClient(round.stageId);
 
                 // set theme card
                 } else {
-                    String themeAnswer = optinalThemeAnswer.get();
+                    String themeAnswer = optionalThemeAnswer.get();
                     storeThemeCard(userId, card, round, themeAnswer);
                     notificationService.publishToStompClient(round.stageId);
-                    return createThemeMessageAndSendMessage(round, userId);
+                    return createAndSendThemeMessage(round, userId);
                 }
 
             } else {
@@ -196,33 +194,12 @@ public class RoundService {
         return true;
     }
 
-    void createRoundSettings(List<StageMember> stageMemberList) {
-        // set cards for this stage
-        List<Card> commentsCards = cardRepository.findByTypeOrderByCreateDate(CardType.COMMENT.name());
-
+    void addStageTurnNumberToStageMember(List<StageMember> stageMemberList) {
         Collections.shuffle(stageMemberList);
-        Collections.shuffle(commentsCards);
-        int count = commentsCards.size() / stageMemberList.size();
-        if (count > stageMemberList.size()) {
-            count = stageMemberList.size();
+        for (int i = 0; i < stageMemberList.size(); i++) {
+            stageMemberList.get(i).turnNumber = i;
         }
-        List<StageUserCard> stageUserCardList = new ArrayList<>();
-
-        for (int outer = 0; outer < stageMemberList.size(); outer++) {
-            stageMemberList.get(outer).turnNumber = outer;
-            final String stageMemberUserId = stageMemberList.get(outer).userId;
-            final String stageMemberStageId = stageMemberList.get(outer).stageId;
-
-            for (int inner = 0; inner < count; inner++) {
-                StageUserCard commentStageUserCard = createStageUserCard(
-                        stageMemberUserId, stageMemberStageId,
-                        commentsCards.get((outer * count) + inner));
-                stageUserCardList.add(commentStageUserCard);
-            }
-        }
-
         stageMemberRepository.saveAll(stageMemberList);
-        stageUserCardRepository.saveAll(stageUserCardList);
     }
 
     boolean createNewRound(String stageId){
@@ -237,40 +214,8 @@ public class RoundService {
             return false;
 
         } else {
-            final Round round = new Round();
-            round.id = System.currentTimeMillis();
-            round.stageId = stageId;
-            round.status = RoundStatus.ON_GOING.name();
-            round.currentRoundNumber = roundList.size();
-            round.currentTurnNumber = roundList.size();
-            round.createDate = Timestamp.valueOf(LocalDateTime.now());
-            final Round resultRound = roundRepository.save(round);
-            final Long roundId = resultRound.id;
-
-            // send round cards
-            List<StageUserCard> stageUserCardList = stageUserCardRepository.findByStageId(stageId);
-            Map<String, List<String>> stageUserCardListMap = new HashMap<>();
-            for (StageUserCard stageUserCard : stageUserCardList) {
-                String userId = stageUserCard.userId;
-                String cardId = stageUserCard.cardId;
-                if (stageUserCardListMap.get(userId) != null) {
-                    List existList = stageUserCardListMap.get(userId);
-                    existList.add(cardId);
-                    stageUserCardListMap.put(userId, existList);
-                } else {
-                    List newList = new ArrayList<String>();
-                    newList.add(cardId);
-                    stageUserCardListMap.put(userId, newList);
-                }
-            }
-            // send situation card to evil
-            String evil = stageMemberList.stream()
-                    .filter(s -> s.turnNumber == resultRound.currentRoundNumber)
-                    .map(s -> s.userId)
-                    .findFirst()
-                    .get();
+            // get situation card
             List<Card> situationList = cardRepository.findByTypeOrderByCreateDate(CardType.SITUATION.name());
-            // get situation cards someone already sent
             List<Long> roundIds = roundList.stream().map(r -> r.id).collect(Collectors.toList());
             List<String> roundCardListForSituation =
                     roundCardRepository
@@ -285,23 +230,50 @@ public class RoundService {
                 }
             }
             Collections.shuffle(situationList);
-            // send card and comment for evil
-            createCardAndSendMessage(stageId, roundId, Collections.singletonList(situationList.get(0)), evil);
+            Card situationCard = situationList.get(0);
+
+            // set a round info
+            final Round round = new Round();
+            round.id = System.currentTimeMillis();
+            round.stageId = stageId;
+            round.status = RoundStatus.ON_GOING.name();
+            round.situationCardId = situationCard.id;
+            round.currentRoundNumber = roundList.size();
+            round.currentTurnNumber = roundList.size();
+            round.createDate = Timestamp.valueOf(LocalDateTime.now());
+            final Round resultRound = roundRepository.save(round);
+            final Long roundId = resultRound.id;
+
+            // send a situation card to evil
+            final StageMember evil = stageMemberList.stream()
+                    .filter(s -> s.turnNumber == resultRound.currentRoundNumber)
+                    .findFirst()
+                    .get();
+
+            final FlexMessage message = createCard(stageId, roundId, Collections.singletonList(situationCard));
             final String nextYourTurnMessage = messageSource.getMessage(
                     "bot.round.set.round.card.next.your.turn",
                     null,
                     Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(evil),
-                    Collections.singletonList(new TextMessage(nextYourTurnMessage)));
+            lineMessage.multicast(
+                    Collections.singleton(evil.userId),
+                    Arrays.asList(new TextMessage(nextYourTurnMessage), message));
+
             // send comment and option card to stage member except evil
-            for (Map.Entry<String, List<String>> entry : stageUserCardListMap.entrySet()) {
-                String userId = entry.getKey();
-                List<Card> cardList = cardRepository.findByIdIn(entry.getValue());
-                if (!userId.equals(evil)) {
-                    createCardAndSendMessage(stageId, roundId, cardList, userId);
+            HashSet<String> stageMemberExceptEvil = new HashSet<>();
+            for (StageMember member : stageMemberList) {
+                if (!member.userId.equals(evil.userId)) {
+                    stageMemberExceptEvil.add(member.userId);
                 }
             }
 
+            final String gameStartMessage = messageSource.getMessage(
+                    "bot.round.set.round.card.game.start",
+                    new Object[]{evil.userName},
+                    Locale.JAPANESE);
+            lineMessage.multicast(
+                    stageMemberExceptEvil,
+                    Collections.singletonList(new TextMessage(gameStartMessage)));
         }
         return true;
     }
@@ -314,26 +286,118 @@ public class RoundService {
         return roundRepository.saveAll(roundList);
     }
 
-    void deleteByStageId(String stageId) {
-        stageUserCardRepository.deleteByStageId(stageId);
-    }
-
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 ///////////////////  private method  //////////////////////
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 
-    private StageUserCard createStageUserCard(String userId, String stageId, Card card) {
-        final StageUserCard stageUserCard = new StageUserCard();
-        stageUserCard.id = CommonUtils.getUUID();
-        stageUserCard.userId = userId;
-        stageUserCard.stageId = stageId;
-        stageUserCard.cardId = card.id;
-        return stageUserCard;
+    private void storeRoundCardAndSendMessage(String userId, Long roundId, Card card, Integer turnNumber) {
+        RoundCard roundCard = new RoundCard();
+        roundCard.id = CommonUtils.getUUID();
+        roundCard.roundId = roundId;
+        roundCard.userId = userId;
+        roundCard.cardId = card.id;
+        roundCard.turnNumber = turnNumber;
+        roundCard.createDate = Timestamp.valueOf(LocalDateTime.now());
+        roundCardRepository.save(roundCard);
+
+        final String successMessage = messageSource.getMessage(
+                "bot.round.set.round.card.success",
+                null,
+                Locale.JAPANESE);
+        lineMessage.multicast(Collections.singleton(userId),
+                Collections.singletonList(new TextMessage(successMessage)));
     }
 
-    private void createCardAndSendMessage(String stageId, Long roundId, List<Card> cardList, String userId) {
+    private void storeThemeCard(String userId, Card card, Round round, String themeAnswer) {
+        RoundRetrospective roundRetrospective = new RoundRetrospective();
+        roundRetrospective.id =  CommonUtils.getUUID();
+        roundRetrospective.roundId = round.id;
+        roundRetrospective.userId = userId;
+        roundRetrospective.cardId = card.id;
+        roundRetrospective.answer = themeAnswer;
+        roundRetrospective.createDate = Timestamp.valueOf(LocalDateTime.now());
+        roundRetrospectiveRepository.save(roundRetrospective);
+    }
+
+    private void prepareForNextMember(Card card, Round round, List<StageMember> stageMemberList) {
+        Integer nextCurrentTurnNumber;
+        if(!card.type.equals(CardType.THEME.name())) {
+            if (round.currentTurnNumber == (stageMemberList.size() - 1)) {
+                nextCurrentTurnNumber = 0;
+            } else {
+                nextCurrentTurnNumber = round.currentTurnNumber + 1;
+            }
+            round.currentTurnNumber = nextCurrentTurnNumber;
+            roundRepository.save(round);
+        } else {
+            nextCurrentTurnNumber = round.currentTurnNumber;
+        }
+        // next action
+        String nextUserId = stageMemberList
+                .stream()
+                .filter(s -> s.turnNumber == nextCurrentTurnNumber)
+                .map(s -> s.userId)
+                .findFirst().get();
+
+        if (nextCurrentTurnNumber != round.currentRoundNumber) {
+            createAndSendCommentMessage(round, nextUserId);
+        } else {
+            createAndSendThemeMessage(round, nextUserId);
+        }
+    }
+
+    private void createAndSendCommentMessage(Round round, String nextUserId) {
+        List<Card> commentList = cardRepository.findByTypeAndIdStartsWithOrderByCreateDate(CardType.COMMENT.name(), round.situationCardId);
+        FlexMessage flexMessage = createCard(round.stageId, round.id, commentList);
+        final String nextYourTurnMessage = messageSource.getMessage(
+                "bot.round.set.round.card.next.your.turn",
+                null,
+                Locale.JAPANESE);
+        lineMessage.multicast(
+                Collections.singleton(nextUserId),
+                Arrays.asList(flexMessage, new TextMessage(nextYourTurnMessage)));
+    }
+
+    private boolean createAndSendThemeMessage(Round round, String userId) {
+        List<Card> themeList = cardRepository.findByTypeOrderByCreateDate(CardType.THEME.name());
+        List<RoundRetrospective> roundRetrospectives =
+                roundRetrospectiveRepository.findByRoundIdOrderByCreateDateDesc(round.id);
+        int currentRetrospectiveSize = roundRetrospectives.size();
+
+        if (themeList.size() <= currentRetrospectiveSize) {
+            return createNewRound(round.stageId);
+        }
+
+        List<Message> messageList = new ArrayList<>();
+        if (currentRetrospectiveSize == 0) {
+            final String nextYourTurnMessage = messageSource.getMessage(
+                    "bot.round.set.round.card.for.theme.next.your.turn",
+                    null,
+                    Locale.JAPANESE);
+            messageList.add(new TextMessage(nextYourTurnMessage));
+        }
+        Card themeCard = themeList.get(currentRetrospectiveSize);
+        final String question = messageSource.getMessage(
+                "bot.round.set.round.card.for.theme.question",
+                new Object[]{themeCard.text},
+                Locale.JAPANESE);
+        final QuickReply quickReply = __createThemeQuickReply(round.stageId, round.id, themeCard);
+        messageList.add(TextMessage.builder().text(question).quickReply(quickReply).build());
+
+        lineMessage.multicast(Collections.singleton(userId),messageList);
+        return true;
+    }
+
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+///////////////////  private method  //////////////////////
+////////////////  to construct message  ///////////////////
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+
+    private FlexMessage createCard(String stageId, Long roundId, List<Card> cardList) {
         List<Bubble> bubbleList = new ArrayList<>();
         for(Card card : cardList) {
             bubbleList.add(__createCardBubble(stageId, roundId, card));
@@ -346,9 +410,7 @@ public class RoundService {
                 "bot.round.user.cards.altText",
                 null,
                 Locale.JAPANESE);
-        lineMessage.multicast(
-                Collections.singleton(userId),
-                Collections.singletonList(new FlexMessage(altText, carousel)));
+        return new FlexMessage(altText, carousel);
     }
 
     private Bubble __createCardBubble(String stageId, Long roundId, Card card){
@@ -413,98 +475,6 @@ public class RoundService {
         return bubble;
     };
 
-    private void storeRoundCardAndSendMessage(String userId, Long roundId, Card card, Round round, Integer turnNumber) {
-        RoundCard roundCard = new RoundCard();
-        roundCard.id = CommonUtils.getUUID();
-        roundCard.roundId = roundId;
-        roundCard.userId = userId;
-        roundCard.cardId = card.id;
-        roundCard.turnNumber = turnNumber;
-        roundCard.createDate = Timestamp.valueOf(LocalDateTime.now());
-        roundCardRepository.save(roundCard);
-        stageUserCardRepository.deleteByStageIdAndUserIdAndCardId(round.stageId, userId, card.id);
-
-        final String successMessage = messageSource.getMessage(
-                "bot.round.set.round.card.success",
-                null,
-                Locale.JAPANESE);
-        lineMessage.multicast(Collections.singleton(userId),
-                Collections.singletonList(new TextMessage(successMessage)));
-    }
-
-    private void prepareForNextMember(Card card, Round round, List<StageMember> stageMemberList) {
-        Integer nextCurrentTurnNumber;
-        if(!card.type.equals(CardType.THEME.name())) {
-            if (round.currentTurnNumber == (stageMemberList.size() - 1)) {
-                nextCurrentTurnNumber = 0;
-            } else {
-                nextCurrentTurnNumber = round.currentTurnNumber + 1;
-            }
-            round.currentTurnNumber = nextCurrentTurnNumber;
-            roundRepository.save(round);
-        } else {
-            nextCurrentTurnNumber = round.currentTurnNumber;
-        }
-        // next action
-        String nextUserId = stageMemberList
-                .stream()
-                .filter(s -> s.turnNumber == nextCurrentTurnNumber)
-                .map(s -> s.userId)
-                .findFirst().get();
-
-        if (nextCurrentTurnNumber != round.currentRoundNumber) {
-            final String nextYourTurnMessage = messageSource.getMessage(
-                    "bot.round.set.round.card.next.your.turn",
-                    null,
-                    Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(nextUserId),
-                    Collections.singletonList(new TextMessage(nextYourTurnMessage)));
-        } else {
-            createThemeMessageAndSendMessage(round, nextUserId);
-        }
-    }
-
-    private void storeThemeCard(String userId, Card card, Round round, String themeAnswer) {
-        RoundRetrospective roundRetrospective = new RoundRetrospective();
-        roundRetrospective.id =  CommonUtils.getUUID();
-        roundRetrospective.roundId = round.id;
-        roundRetrospective.userId = userId;
-        roundRetrospective.cardId = card.id;
-        roundRetrospective.answer = themeAnswer;
-        roundRetrospective.createDate = Timestamp.valueOf(LocalDateTime.now());
-        roundRetrospectiveRepository.save(roundRetrospective);
-    }
-
-    private boolean createThemeMessageAndSendMessage(Round round, String userId) {
-        List<Card> themeList = cardRepository.findByTypeOrderByCreateDate(CardType.THEME.name());
-        List<RoundRetrospective> roundRetrospectives =
-                roundRetrospectiveRepository.findByRoundIdOrderByCreateDateDesc(round.id);
-        int currentRetrospectiveSize = roundRetrospectives.size();
-
-        if (themeList.size() <= currentRetrospectiveSize) {
-            return createNewRound(round.stageId);
-        }
-
-        List<Message> messageList = new ArrayList<>();
-        if (currentRetrospectiveSize == 0) {
-            final String nextYourTurnMessage = messageSource.getMessage(
-                    "bot.round.set.round.card.for.theme.next.your.turn",
-                    null,
-                    Locale.JAPANESE);
-            messageList.add(new TextMessage(nextYourTurnMessage));
-        }
-        Card themeCard = themeList.get(currentRetrospectiveSize);
-        final String question = messageSource.getMessage(
-                "bot.round.set.round.card.for.theme.question",
-                new Object[]{themeCard.text},
-                Locale.JAPANESE);
-        final QuickReply quickReply = __createThemeQuickReply(round.stageId, round.id, themeCard);
-        messageList.add(TextMessage.builder().text(question).quickReply(quickReply).build());
-
-        lineMessage.multicast(Collections.singleton(userId),messageList);
-        return true;
-    }
-    
     private QuickReply __createThemeQuickReply(String stageId, Long roundId, Card card) {
         final String condition1 = messageSource.getMessage(
                 "card.future.team.condition.1",

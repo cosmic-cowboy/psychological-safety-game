@@ -127,7 +127,7 @@ public class StageService {
             currentStage.updateDate = Timestamp.valueOf(LocalDateTime.now());
             stageRepository.save(currentStage);
 
-            roundService.createRoundSettings(stageMemberList);
+            roundService.addStageTurnNumberToStageMember(stageMemberList);
             // set turn_number for this stage
             // set cards for this stage
             boolean success = roundService.createNewRound(stageId);
@@ -219,7 +219,6 @@ public class StageService {
             stageRepository.save(currentStage);
 
             List<StageMember> stageMemberList = stageMemberService.terminatedStageMembers(stageId);
-            roundService.deleteByStageId(stageId);
 
             Set<String> memberSet = stageMemberList.stream().map(s -> s.userId).collect(Collectors.toSet());
             final String successMessage = messageSource.getMessage(

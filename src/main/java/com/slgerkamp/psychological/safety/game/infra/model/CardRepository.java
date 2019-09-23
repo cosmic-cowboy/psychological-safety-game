@@ -8,6 +8,8 @@ public interface CardRepository extends JpaRepository<Card, String> {
 
     List<Card> findByTypeOrderByCreateDate(String type);
 
+    List<Card> findByTypeAndIdStartsWithOrderByCreateDate(String type, String id);
+
     List<Card> findByIdIn(List<String> list);
 
 }
