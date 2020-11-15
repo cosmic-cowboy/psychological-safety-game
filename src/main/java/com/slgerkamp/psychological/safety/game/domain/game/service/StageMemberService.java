@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class StageMemberService {
@@ -130,11 +131,16 @@ public class StageMemberService {
             final String status,
             final String role) {
 
-        final Optional<StageMember> optionalStageMember = getStageMemberForEachUser(userId);
-        if (optionalStageMember.isPresent()) {
-            List<String> statusList = Arrays.asList(
-                    StageMemberStatus.APPLY_TO_JOIN.name(),
-                    StageMemberStatus.JOINING.name());
+        List<String> statusList = Arrays.asList(
+                StageMemberStatus.APPLY_TO_JOIN.name(),
+                StageMemberStatus.JOINING.name());
+
+        List<StageMember> stageMemberList =
+                stageMemberRepository.findByUserIdAndStatusIn(userId, statusList);
+
+        if (stageMemberList.size() > 0) {
+            List<String> stageList = stageMemberList.stream().map(s -> s.stageId).collect(Collectors.toList());
+            sendMessageForRemoveStageMemberFromJoining(userId, stageList);
             stageMemberRepository.deleteByUserIdAndStatusIn(userId, statusList);
         }
         final StageMember stageMember = new StageMember();
@@ -150,31 +156,29 @@ public class StageMemberService {
         notificationService.publishToStompClient(stageId);
     }
 
-    private Optional<StageMember> getStageMemberForEachUser(final String userId) {
-        Optional<StageMember> optionalStageMember = Optional.empty();
-        List<String> statusList = Arrays.asList(
-                StageMemberStatus.APPLY_TO_JOIN.name(),
-                StageMemberStatus.JOINING.name());
-        List<StageMember> stageMemberList =
-                stageMemberRepository.findByUserIdAndStatusIn(userId, statusList);
-        if (stageMemberList.size() > 0) {
-            optionalStageMember = Optional.of(stageMemberList.get(0));
-        }
-        return optionalStageMember;
-    }
-
     private void sendMessageForJoiningMember_doNotCallDirectly(
             final String userId,
             final Stage stage) {
         final String url = CommonUtils.createStageUrl(stage.id);
-        final String correctPassword = messageSource.getMessage(
+        final String joinNewStage = messageSource.getMessage(
                 "bot.stage.input.join.new.stage",
                 new Object[]{stage.id, url},
                 Locale.JAPANESE);
-        try {
-            lineMessage.multicast(Collections.singleton(userId),
-                    Collections.singletonList(new TextMessage(correctPassword)));
-        } catch (RuntimeException ex) {
-        }
+        lineMessage.multicast(
+                Collections.singleton(userId),
+                Collections.singletonList(new TextMessage(joinNewStage)));
     }
+
+    private void sendMessageForRemoveStageMemberFromJoining(
+            final String userId,
+            final List<String> stageList) {
+        final String deleteStageBeforeJoining = messageSource.getMessage(
+                "bot.stage.input.join.delete.stage",
+                new Object[]{String.join(",", stageList)},
+                Locale.JAPANESE);
+        lineMessage.multicast(
+                Collections.singleton(userId),
+                Collections.singletonList(new TextMessage(deleteStageBeforeJoining)));
+    }
+
 }
