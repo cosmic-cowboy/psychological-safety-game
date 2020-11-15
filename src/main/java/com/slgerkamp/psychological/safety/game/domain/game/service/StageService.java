@@ -48,21 +48,34 @@ public class StageService {
 
     public void createStageTable(String userId) {
 
-        Optional<StageMember> optionalActiveStageCreator =
-                stageMemberService.getActiveStageCreatorFromUserId(userId);
-        if (!optionalActiveStageCreator.isPresent()) {
+        Optional<StageMember> optionalUserJoiningStageFromUserId =
+                stageMemberService.getUserJoiningStageFromUserId(userId);
+
+
+        // user does not join any stage or user join a stage as a participator
+        if (!optionalUserJoiningStageFromUserId.isPresent()
+                || optionalUserJoiningStageFromUserId.get().role.equals(StageMemberRole.PARTICIPATOR.name())) {
+
+            // user join a stage as a participator and leave from this stage
+            if (optionalUserJoiningStageFromUserId.isPresent()) {
+                // deleteUser
+                stageMemberService.leaveFromJoiningStage(userId, Collections.singletonList(optionalUserJoiningStageFromUserId.get()));
+            }
+
+            // createStage
             final Stage result_stage = createStageTable();
             stageMemberService.addCreator(userId, result_stage.id);
             final String url = CommonUtils.createStageUrl(result_stage.id);
             qrCodeGenerator.create(url, result_stage.id);
-
             final FlexMessage flexMessage = createSuccessFlexMessage(url);
             lineMessage.multicast(
                     Collections.singleton(userId),
                     Collections.singletonList(flexMessage));
+
+        // user join a stage as a creator
         } else {
             final FlexMessage flexMessage =
-                    createConfirmToFinishStageFlexMessage(optionalActiveStageCreator.get().stageId);
+                    createConfirmToFinishStageFlexMessageForCreator(optionalUserJoiningStageFromUserId.get().stageId);
             lineMessage.multicast(
                     Collections.singleton(userId),
                     Collections.singletonList(flexMessage));
@@ -279,7 +292,7 @@ public class StageService {
         return new FlexMessage(successMessage, bubble);
     }
 
-    private FlexMessage createConfirmToFinishStageFlexMessage(String stageId) {
+    private FlexMessage createConfirmToFinishStageFlexMessageForCreator(String stageId) {
         final String buttonTitle = messageSource.getMessage(
                 "bot.stage.end.request.title",
                 new Object[]{stageId},
@@ -304,18 +317,6 @@ public class StageService {
                 null,
                 Locale.JAPANESE);
 
-        return createFlexButtonForFinish(
-                buttonTitle, buttonText, postbackLabel,
-                postbackText, postbackData, altText);
-    }
-
-    private FlexMessage createFlexButtonForFinish(
-            String buttonTitle,
-            String buttonText,
-            String postbackLabel,
-            String postbackText,
-            String postbackData,
-            String altText) {
         final Text titleComponent =
                 Text.builder()
                         .text(buttonTitle)

@@ -51,25 +51,14 @@ public class StageMemberService {
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 
-    Optional<StageMember> getActiveStageCreatorFromUserId(final String userId) {
-        List<StageMember> stageCreatorList =
-                stageMemberRepository.findByUserIdAndRoleAndStatus(
-                        userId, StageMemberRole.CREATOR.name(), StageMemberStatus.JOINING.name());
-        Optional<StageMember> optionalStageCreator = Optional.empty();
-        if (stageCreatorList.size() > 0 ) {
-            optionalStageCreator = Optional.of(stageCreatorList.get(0));
+    Optional<StageMember> getUserJoiningStageFromUserId(final String userId) {
+        List<StageMember> userJoiningStage = stageMemberRepository.findByUserIdAndStatus(
+                        userId, StageMemberStatus.JOINING.name());
+        Optional<StageMember> optionalUserJoiningStage = Optional.empty();
+        if (userJoiningStage.size() > 0 ) {
+            optionalUserJoiningStage = Optional.of(userJoiningStage.get(0));
         }
-        return optionalStageCreator;
-    }
-
-
-    Optional<StageMember> getStageJoiningMemberFromUserId(final String userId) {
-        List<StageMember> userStageMemberList = getStageJoiningMembersFromUserId(userId);
-        Optional<StageMember> optionalStageMember = Optional.empty();
-        if (userStageMemberList.size() > 0 ) {
-            optionalStageMember = Optional.of(userStageMemberList.get(0));
-        }
-        return optionalStageMember;
+        return optionalUserJoiningStage;
     }
 
     List<StageMember> getStageJoiningMembersFromUserId(String userId) {
@@ -117,6 +106,17 @@ public class StageMemberService {
         sendMessageForJoiningMember_doNotCallDirectly(userId, stage);
     }
 
+    void leaveFromJoiningStage(String userId, List<StageMember> stageMemberList){
+        List<String> statusList = Arrays.asList(
+                StageMemberStatus.APPLY_TO_JOIN.name(),
+                StageMemberStatus.JOINING.name());
+        List<String> stageList = stageMemberList.stream().map(s -> s.stageId).collect(Collectors.toList());
+        sendMessageForRemoveStageMemberFromJoining(userId, stageList);
+        stageMemberRepository.deleteByUserIdAndStatusIn(userId, statusList);
+
+    }
+
+
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 ///////////////////  private method  //////////////////////
@@ -139,10 +139,9 @@ public class StageMemberService {
                 stageMemberRepository.findByUserIdAndStatusIn(userId, statusList);
 
         if (stageMemberList.size() > 0) {
-            List<String> stageList = stageMemberList.stream().map(s -> s.stageId).collect(Collectors.toList());
-            sendMessageForRemoveStageMemberFromJoining(userId, stageList);
-            stageMemberRepository.deleteByUserIdAndStatusIn(userId, statusList);
+            leaveFromJoiningStage(userId, stageMemberList);
         }
+
         final StageMember stageMember = new StageMember();
         stageMember.id = CommonUtils.getUUID();
         stageMember.stageId = stageId;
