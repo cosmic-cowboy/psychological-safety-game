@@ -53,8 +53,6 @@ public class RoundService {
     private LineMessage lineMessage;
     @Autowired
     private MessageSource messageSource;
-    @Autowired
-    private NotificationService notificationService;
 
     public Map<Long, List<RoundCardForView>> getRoundCards(String stageId) {
         List<Round> roundList = roundRepository.findByStageIdOrderByCreateDateDesc(stageId);
@@ -167,25 +165,25 @@ public class RoundService {
                 // This is for situation post
                 if(card.type.equals(CardType.SITUATION.name())){
                     // send comment and option card to stage members except evil
-                    HashSet<String> stageMemberExceptEvil = new HashSet<>();
-                    for (StageMember member : stageMemberList) {
-                        if (!member.userId.equals(userId)) {
-                            stageMemberExceptEvil.add(member.userId);
-                        }
+                    HashSet<String> stageMemberExceptEvil = getStageMemberExceptEvil(stageMemberList, userId);
+                    if (stageMemberExceptEvil.size() > 0) {
+                        createAndSendCommentMessage(round, stageMemberExceptEvil);
                     }
-                    createAndSendCommentMessage(round, stageMemberExceptEvil);
+                }
                 // This is for the last comment post
-                } else if (roundCardList.size() >= stageMemberList.size() - 1){
-                    String evilUser = roundCardList.get(0).userId;
-                    notificationService.publishToStompClient(round.stageId);
+                if (roundCardList.size() >= stageMemberList.size() - 1){
+                    String evilUser;
+                    if (roundCardList.size() == 0) {
+                        evilUser = userId;
+                    } else {
+                        evilUser = roundCardList.get(0).userId;
+                    }
                     return createAndSendThemeMessage(round, evilUser);
                 }
-
             // This is for theme post
             } else {
                 String themeAnswer = optionalThemeAnswer.get();
                 storeThemeCard(userId, card, round, themeAnswer);
-                notificationService.publishToStompClient(round.stageId);
                 return createAndSendThemeMessage(round, userId);
             }
         // This post is exception
@@ -276,20 +274,16 @@ public class RoundService {
                     Arrays.asList(new TextMessage(nextYourTurnMessage), message));
 
             // send comment and option card to stage member except evil
-            HashSet<String> stageMemberExceptEvil = new HashSet<>();
-            for (StageMember member : stageMemberList) {
-                if (!member.userId.equals(evil.userId)) {
-                    stageMemberExceptEvil.add(member.userId);
-                }
+            HashSet<String> stageMemberExceptEvil = getStageMemberExceptEvil(stageMemberList, evil.userId);
+            if (stageMemberExceptEvil.size() > 0) {
+                final String gameStartMessage = messageSource.getMessage(
+                        "bot.round.set.round.card.game.start",
+                        new Object[]{evil.userName},
+                        Locale.JAPANESE);
+                lineMessage.multicast(
+                        stageMemberExceptEvil,
+                        Collections.singletonList(new TextMessage(gameStartMessage)));
             }
-
-            final String gameStartMessage = messageSource.getMessage(
-                    "bot.round.set.round.card.game.start",
-                    new Object[]{evil.userName},
-                    Locale.JAPANESE);
-            lineMessage.multicast(
-                    stageMemberExceptEvil,
-                    Collections.singletonList(new TextMessage(gameStartMessage)));
         }
         return true;
     }
@@ -307,6 +301,16 @@ public class RoundService {
 ///////////////////  private method  //////////////////////
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
+
+    private HashSet<String> getStageMemberExceptEvil(List<StageMember> stageMemberList, String userId) {
+        HashSet<String> stageMemberExceptEvil = new HashSet<>();
+        for (StageMember member : stageMemberList) {
+            if (!member.userId.equals(userId)) {
+                stageMemberExceptEvil.add(member.userId);
+            }
+        }
+        return stageMemberExceptEvil;
+    }
 
     private void storeRoundCardAndSendMessage(String userId, Long roundId, Card card) {
         RoundCard roundCard = new RoundCard();

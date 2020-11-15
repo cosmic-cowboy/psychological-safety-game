@@ -147,6 +147,7 @@ public class StageService {
     public void setRoundCard(String stageId, String userId, Long roundId, String cardId) {
         boolean success =
                 roundService.storeRoundCardOrThemeCardAndSendMessage(userId, roundId, cardId, Optional.empty());
+        notificationService.publishToStompClient(stageId);
         if (!success) {
             finishStage(stageId);
         }
@@ -155,6 +156,7 @@ public class StageService {
     public void setThemeCard(String stageId, String userId, Long roundId, String cardId, String themeAnswer) {
         boolean success =
                 roundService.storeRoundCardOrThemeCardAndSendMessage(userId, roundId, cardId, Optional.of(themeAnswer));
+        notificationService.publishToStompClient(stageId);
         if (!success) {
             finishStage(stageId);
         }

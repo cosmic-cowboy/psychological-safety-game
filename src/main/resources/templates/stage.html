@@ -40,47 +40,69 @@
                         <!-- Stage info ends -->
                         <!-- Introduction starts -->
                         <div id="stageIntroduction" th:if="${stageNotStartedYet}" class="page-content">
-                            <h1 class="text-center" th:text="#{web.stage.participate.step}"></h1>
+                            <h1 class="text-center">ゲームをはじめるまでの流れ</h1>
+
                             <div class="content-list">
                                 <div class="content-list-head row">
-                                    <h3>STEP 1</h3>
+                                    <h2 class="div-center">STEP 1</h2>
                                 </div>
                                 <div class="content-list-body row">
-                                    <div class="col-lg-3">
-                                        <p class="text-center">
-                                            <img width="150px" class="img-fluid" alt="url qr code" th:src="${stageQRcode}" />
-                                        </p>
+                                    <div class="col-lg-12 text-center">
+                                        <img width="250px" alt="url qr code" th:src="${stageQRcode}" />
                                     </div>
-                                    <div class="col-lg-9 lead line-height-2">
-                                        <p th:text="#{web.stage.participate.step.1}"></p>
+                                    <div class="col-lg-12">
+                                        <h4 class="top-lead">
+                                            参加するメンバーは、QRコードを読み込んでください。<br>
+                                            QRコードを読み込むとLINEログイン画面が表示されますので、ログインをお願いします。<br>
+                                            ログインが完了すると、参加者のアイコンがこのページの先頭に表示されます。
+                                        </h4>
                                     </div>
                                 </div>
 
                                 <div class="content-list-head row">
-                                    <h3>STEP 2</h3>
+                                    <h2 class="div-center">STEP 2</h2>
                                 </div>
                                 <div class="content-list-body row">
-                                    <div class="col-lg-3">
-                                        <p class="text-center">
-                                            <img width="150px" class="img-fluid" alt="start game" src="../img/start_game.jpg" />
-                                        </p>
+                                    <div class="col-lg-12">
+                                        <h4 class="top-lead">
+                                            参加者が揃ったら、「ゲームをはじめる」をクリックしてください。<br>
+                                            ゲームがはじまってからは参加者を追加することはできません。<br>
+                                            クリックは、参加者が揃うまではお待ち下さい。
+
+                                        </h4>
                                     </div>
-                                    <div class="col-lg-9 lead line-height-2">
-                                        <p th:text="#{web.stage.participate.step.2}"></p>
+                                    <div class="col-lg-12">
+                                        <form th:action="@{__${startPostUrl}__}" method="post" class="text-center">
+                                            <button type="submit" class="btn btn-primary btn-lg" >ゲームをはじめる</button>
+                                        </form>
                                     </div>
                                 </div>
 
                                 <div class="content-list-head row">
-                                    <h3>Note</h3>
+                                    <h2 class="div-center">STEP 3</h2>
                                 </div>
                                 <div class="content-list-body row">
-                                    <div class="col-lg-3">
-                                        <p class="text-center">
-                                            <img width="150px" class="img-fluid" alt="bot qr code" src="../img/bot-qrcode.jpg" />
-                                        </p>
+                                    <div class="col-lg-12">
+                                        <h4 class="top-lead">
+                                            ゲームがはじまると、参加者のボット（公式アカウント）にカードが届きます。<br>
+                                            「あなたの順番です」となっている方からカードを投稿してください。<br>
+                                            投稿したカードはこの画面に表示されます。画面を見ながら、ゲームを楽しんでください。
+                                        </h4>
                                     </div>
-                                    <div class="col-lg-9 lead line-height-2">
-                                        <p th:text="#{web.stage.participate.step.caution}"></p>
+                                </div>
+
+                                <div class="content-list-head row">
+                                    <h2 class="div-center">Note</h2>
+                                </div>
+                                <div class="content-list-body row">
+                                    <div class="col-lg-12 text-center">
+                                        <img width="150px" alt="bot qr code" src="../img/bot-qrcode.jpg" />
+                                    </div>
+                                    <div class="col-lg-12">
+                                        <h4 class="top-lead">
+                                            タップしたときに、まだ心理的安全性ゲームBotを友だち追加していない参加者がいると、ゲームを始めることができません。<br>
+                                            そのときは、左側に表示されているQRコードからボットを追加してください。
+                                        </h4>
                                     </div>
                                 </div>
                             </div>

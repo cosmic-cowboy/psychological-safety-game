@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.List;
 import java.util.Locale;
@@ -51,11 +52,31 @@ public class WebController {
         return "stage";
     }
 
+    @PostMapping("/stage/{stageId}/start")
+    public void start(@PathVariable String stageId, final OAuth2Authentication oAuth2Authentication) {
+        final String userId = getUserId(oAuth2Authentication);
+        stageService.confirmToStartStage(userId, stageId);
+    }
+
+    @PostMapping("/stage/{stageId}/finish")
+    public String finish(@PathVariable String stageId, final OAuth2Authentication oAuth2Authentication) {
+        final String userId = getUserId(oAuth2Authentication);
+        stageService.confirmToFinishStage(userId, stageId);
+        return "stage";
+    }
+
+
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 ///////////////////////  private method  //////////////////////////
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
+
+    private String getUserId(OAuth2Authentication oAuth2Authentication) {
+        Map<String, Object> properties =
+                (Map<String, Object>) oAuth2Authentication.getUserAuthentication().getDetails();
+        return (String) properties.get("userId");
+    }
 
     private boolean isMember(List<StageMember> stageMemberList, final OAuth2Authentication oAuth2Authentication) {
 
@@ -89,6 +110,8 @@ public class WebController {
         model.addAttribute("roundCardForViewMap", roundCardForViewMap);
         model.addAttribute("roundRetrospectiveMap", roundRetrospectiveMap);
         model.addAttribute("subscriptionUrl", subscriptionUrl);
+        model.addAttribute("startPostUrl", "/stage/" + stage.id + "/start");
+        model.addAttribute("finishPostUrl", "/stage/" + stage.id + "/finish");
 
         for(StageMember stageMember : stageMemberList){
             model.addAttribute(stageMember.userId, stageMember);
