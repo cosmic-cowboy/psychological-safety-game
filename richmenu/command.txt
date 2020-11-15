@@ -3,15 +3,15 @@ curl -v -X POST https://api.line.me/v2/bot/richmenu \
 -H 'Authorization: Bearer {channel access token}' \
 -H 'Content-Type: application/json' \
 -d \
-'{"size": {"width": 2500,"height": 843},"selected": false,"name": "心理的安全ゲーム","chatBarText": "心理的安全ゲーム","areas": [{"bounds": {"x": 0,"y": 0,"width": 820,"height": 843},"action":{"label":"create stage","type":"postback","data":"action=CREATE","text":"create stages"}},{"bounds": {"x": 820,"y": 0,"width": 860,"height": 843},"action":{"label":"request to start","type":"postback","data":"action=REQUEST_TO_START_STAGE","text":"request to start stage"}},{"bounds": {"x": 1680,"y": 0,"width": 820,"height": 843},"action":{"label":"request to finish","type":"postback","data":"action=REQUEST_TO_FINISH_STAGE","text":"request to finish stage"}}]}'
+'{"size": {"width": 2500,"height": 843},"selected": false,"name": "心理的安全ゲーム","chatBarText": "心理的安全ゲーム","areas": [{"bounds": {"x": 0,"y": 0,"width": 2500,"height": 843},"action":{"label":"create stage","type":"postback","data":"action=CREATE","text":"create stages"}}]}'
 
 
 
 ### upload image
-curl -v -X POST https://api.line.me/v2/bot/richmenu/{richMenuId}/content \
+curl -v -X POST https://api-data.line.me/v2/bot/richmenu/{richMenuId}/content \
 -H "Authorization: Bearer {channel access token}" \
--H "Content-Type: image/png" \
--T {path}/bot-rich-menu.png
+-H "Content-Type: image/jpeg" \
+-T bot-rich-menu.jpg
 
 
 ### set rich menu
