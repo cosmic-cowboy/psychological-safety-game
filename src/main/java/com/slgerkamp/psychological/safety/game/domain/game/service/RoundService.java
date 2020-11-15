@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 @Component
 public class RoundService {
 
+    private static final Logger log = LoggerFactory.getLogger(GameController.class);
+
     @Autowired
     private StageMemberRepository stageMemberRepository;
     @Autowired
@@ -210,17 +212,28 @@ public class RoundService {
             return false;
 
         } else {
+            List<Long> roundIds = roundList.stream().map(r -> r.id).collect(Collectors.toList());
             // get situation card
             List<Card> situationList = cardRepository.findByTypeOrderByCreateDate(CardType.SITUATION.name());
-            List<Long> roundIds = roundList.stream().map(r -> r.id).collect(Collectors.toList());
-            List<RoundCard> roundCardListForSituation =
-                    roundCardRepository
-                            .findByRoundIdInAndCardIdStartingWith(roundIds, "SITUATION");
+            List<RoundCard> roundCardList = roundCardRepository.findByRoundIdInOrderByCreateDateAsc(roundIds);
+            List<RoundCard> roundCardListForSituation = new ArrayList<>();
+            for (RoundCard r : roundCardList) {
+                for (Card c : situationList) {
+                    if (c.id.equals(r.cardId)) {
+                        roundCardListForSituation.add(r);
+                    }
+                }
+            }
             List<String> situationCardListAlreadySentOnThisRound =
                     roundCardListForSituation.stream().map(roundCard -> roundCard.cardId).collect((Collectors.toList()));
-
             List<String> userIdListAlreadySentSituationCardOnThisRound =
                     roundCardListForSituation.stream().map(roundCard -> roundCard.userId).collect((Collectors.toList()));
+
+            log.debug("roundCardListForSituation : " + roundCardListForSituation.size());
+            log.debug("situationCardListAlreadySentOnThisRound : " + situationCardListAlreadySentOnThisRound.size());
+            log.debug("userIdListAlreadySentSituationCardOnThisRound : " + userIdListAlreadySentSituationCardOnThisRound.size());
+
+
             for(int i = 0; i < situationList.size(); i++) {
                 Card card = situationList.get(i);
                 for(String cardId : situationCardListAlreadySentOnThisRound) {
@@ -249,7 +262,7 @@ public class RoundService {
                 evil = stageMemberList.get(0);
             } else {
                 evil = stageMemberList.stream()
-                        .filter(s -> userIdListAlreadySentSituationCardOnThisRound.contains(s.userId))
+                        .filter(s -> !userIdListAlreadySentSituationCardOnThisRound.contains(s.userId))
                         .findFirst()
                         .get();
             }
