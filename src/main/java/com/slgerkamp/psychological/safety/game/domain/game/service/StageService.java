@@ -48,11 +48,11 @@ public class StageService {
 
     public void createStageTable(String userId) {
 
-        Optional<StageMember> optionalStageMember =
-                stageMemberService.getStageJoiningMemberFromUserId(userId);
-        if (!optionalStageMember.isPresent()) {
+        Optional<StageMember> optionalActiveStageCreator =
+                stageMemberService.getActiveStageCreatorFromUserId(userId);
+        if (!optionalActiveStageCreator.isPresent()) {
             final Stage result_stage = createStageTable();
-            stageMemberService.addMember(userId, result_stage.id);
+            stageMemberService.addCreator(userId, result_stage.id);
             final String url = CommonUtils.createStageUrl(result_stage.id);
             qrCodeGenerator.create(url, result_stage.id);
 
@@ -61,7 +61,8 @@ public class StageService {
                     Collections.singleton(userId),
                     Collections.singletonList(flexMessage));
         } else {
-            final FlexMessage flexMessage = createConfirmToFinishStageFlexMessage(optionalStageMember.get().stageId);
+            final FlexMessage flexMessage =
+                    createConfirmToFinishStageFlexMessage(optionalActiveStageCreator.get().stageId);
             lineMessage.multicast(
                     Collections.singleton(userId),
                     Collections.singletonList(flexMessage));

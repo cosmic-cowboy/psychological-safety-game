@@ -2,6 +2,7 @@ package com.slgerkamp.psychological.safety.game.domain.game.service;
 
 import com.linecorp.bot.model.message.TextMessage;
 import com.linecorp.bot.model.profile.UserProfileResponse;
+import com.slgerkamp.psychological.safety.game.domain.game.StageMemberRole;
 import com.slgerkamp.psychological.safety.game.domain.game.StageMemberStatus;
 import com.slgerkamp.psychological.safety.game.infra.message.LineMessage;
 import com.slgerkamp.psychological.safety.game.infra.model.Stage;
@@ -49,6 +50,18 @@ public class StageMemberService {
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 
+    Optional<StageMember> getActiveStageCreatorFromUserId(final String userId) {
+        List<StageMember> stageCreatorList =
+                stageMemberRepository.findByUserIdAndRoleAndStatus(
+                        userId, StageMemberRole.CREATOR.name(), StageMemberStatus.JOINING.name());
+        Optional<StageMember> optionalStageCreator = Optional.empty();
+        if (stageCreatorList.size() > 0 ) {
+            optionalStageCreator = Optional.of(stageCreatorList.get(0));
+        }
+        return optionalStageCreator;
+    }
+
+
     Optional<StageMember> getStageJoiningMemberFromUserId(final String userId) {
         List<StageMember> userStageMemberList = getStageJoiningMembersFromUserId(userId);
         Optional<StageMember> optionalStageMember = Optional.empty();
@@ -62,14 +75,15 @@ public class StageMemberService {
         return stageMemberRepository.findByUserIdAndStatus(userId, StageMemberStatus.JOINING.name());
     }
 
-    void addMember(final String userId, final String stageId) {
+    void addCreator(final String userId, final String stageId) {
         final UserProfileResponse userProfileResponse = lineMessage.getProfile(userId);
         addMember_doNotCallDirectly(
                 stageId,
                 userId,
                 userProfileResponse.getDisplayName(),
                 userProfileResponse.getPictureUrl(),
-                StageMemberStatus.JOINING.name());
+                StageMemberStatus.JOINING.name(),
+                StageMemberRole.CREATOR.name());
     }
 
     List<StageMember> terminatedStageMembers(String stageId) {
@@ -96,7 +110,8 @@ public class StageMemberService {
                 userId,
                 displayName,
                 pictureUrl,
-                StageMemberStatus.JOINING.name());
+                StageMemberStatus.JOINING.name(),
+                StageMemberRole.PARTICIPATOR.name());
 
         sendMessageForJoiningMember_doNotCallDirectly(userId, stage);
     }
@@ -112,7 +127,8 @@ public class StageMemberService {
             final String userId,
             final String displayName,
             final String pictureUrl,
-            final String status) {
+            final String status,
+            final String role) {
 
         final Optional<StageMember> optionalStageMember = getStageMemberForEachUser(userId);
         if (optionalStageMember.isPresent()) {
@@ -128,6 +144,7 @@ public class StageMemberService {
         stageMember.userName = displayName;
         stageMember.pictureUrl = pictureUrl;
         stageMember.status = status;
+        stageMember.role = role;
         stageMember.createDate = Timestamp.valueOf(LocalDateTime.now());
         stageMemberRepository.save(stageMember);
         notificationService.publishToStompClient(stageId);

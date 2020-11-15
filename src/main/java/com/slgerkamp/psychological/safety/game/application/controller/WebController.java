@@ -53,15 +53,9 @@ public class WebController {
     }
 
     @PostMapping("/stage/{stageId}/start")
-    public void start(@PathVariable String stageId, final OAuth2Authentication oAuth2Authentication) {
+    public String start(@PathVariable String stageId, final OAuth2Authentication oAuth2Authentication) {
         final String userId = getUserId(oAuth2Authentication);
         stageService.confirmToStartStage(userId, stageId);
-    }
-
-    @PostMapping("/stage/{stageId}/finish")
-    public String finish(@PathVariable String stageId, final OAuth2Authentication oAuth2Authentication) {
-        final String userId = getUserId(oAuth2Authentication);
-        stageService.confirmToFinishStage(userId, stageId);
         return "stage";
     }
 
@@ -111,7 +105,6 @@ public class WebController {
         model.addAttribute("roundRetrospectiveMap", roundRetrospectiveMap);
         model.addAttribute("subscriptionUrl", subscriptionUrl);
         model.addAttribute("startPostUrl", "/stage/" + stage.id + "/start");
-        model.addAttribute("finishPostUrl", "/stage/" + stage.id + "/finish");
 
         for(StageMember stageMember : stageMemberList){
             model.addAttribute(stageMember.userId, stageMember);
