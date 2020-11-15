@@ -23,6 +23,5 @@ public class StageMember {
     public String userName;
     public String pictureUrl;
     public String status;
-    public Integer turnNumber;
     public Timestamp createDate;
 }

@@ -1,7 +1,6 @@
 CREATE TABLE round_card (
   id          VARCHAR NOT NULL,
   round_id    BIGINT NOT NULL,
-  turn_number INTEGER NOT NULL,
   user_id     VARCHAR NOT NULL,
   card_id     VARCHAR NOT NULL,
   word        VARCHAR,

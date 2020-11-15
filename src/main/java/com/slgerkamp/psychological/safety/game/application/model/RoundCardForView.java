@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 public class RoundCardForView {
 
     public Long roundId;
-    public Integer turnNumber;
     public String userId;
     public String cardId;
     public String type;

@@ -21,7 +21,6 @@ public class Round {
     public Long id;
     public String stageId;
     public Integer currentRoundNumber;
-    public Integer currentTurnNumber;
     public String situationCardId;
     public String status;
     public Timestamp createDate;

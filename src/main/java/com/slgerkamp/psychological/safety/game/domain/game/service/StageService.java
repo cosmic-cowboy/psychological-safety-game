@@ -127,8 +127,6 @@ public class StageService {
             currentStage.updateDate = Timestamp.valueOf(LocalDateTime.now());
             stageRepository.save(currentStage);
 
-            roundService.addStageTurnNumberToStageMember(stageMemberList);
-            // set turn_number for this stage
             // set cards for this stage
             boolean success = roundService.createNewRound(stageId);
             if (!success) {

@@ -68,7 +68,6 @@ public class RoundService {
                 Card card = cardList.stream().filter(s -> s.id.endsWith(roundCard.cardId)).findFirst().get();
                 RoundCardForView roundCardForView = new RoundCardForView();
                 roundCardForView.roundId = roundCard.roundId;
-                roundCardForView.turnNumber = roundCard.turnNumber;
                 roundCardForView.userId = roundCard.userId;
                 roundCardForView.cardId = roundCard.cardId;
                 roundCardForView.type = card.type;
@@ -82,7 +81,6 @@ public class RoundService {
 
                 RoundCardForView roundCardForViewQuestion = new RoundCardForView();
                 roundCardForViewQuestion.roundId = roundRetrospective.roundId;
-                roundCardForViewQuestion.turnNumber = 0;
                 roundCardForViewQuestion.userId = "defaultIcon";
                 roundCardForViewQuestion.cardId = roundRetrospective.cardId;
                 roundCardForViewQuestion.type = card.type;
@@ -92,7 +90,6 @@ public class RoundService {
 
                 RoundCardForView roundCardForView = new RoundCardForView();
                 roundCardForView.roundId = roundRetrospective.roundId;
-                roundCardForView.turnNumber = 0;
                 roundCardForView.userId = roundRetrospective.userId;
                 roundCardForView.cardId = roundRetrospective.cardId;
                 roundCardForView.type = card.type;
@@ -147,42 +144,46 @@ public class RoundService {
 ///////////////////////////////////////////////////////////
 
     boolean storeRoundCardOrThemeCardAndSendMessage(String userId, Long roundId, String cardId, Optional<String> optionalThemeAnswer) {
-        // check current turn
+
         Optional<Round> optionalRound = roundRepository.findById(roundId);
         Card card = cardRepository.findById(cardId).get();
         List<StageMember> userStageMemberList =
                 stageMemberRepository.findByUserIdAndStatus(userId, StageMemberStatus.JOINING.name());
 
+        // check if stage is active, check if this post is normal
         if (optionalRound.isPresent() && userStageMemberList.size() > 0) {
-            StageMember userStageMember = userStageMemberList.get(0);
             Round round = optionalRound.get();
+            List<StageMember> stageMemberList = stageMemberRepository.findByStageId(round.stageId);
+            List<RoundCard> roundCardList = roundCardRepository.findByRoundIdInOrderByCreateDateAsc(Collections.singletonList(roundId));
 
-            Integer turnNumber = userStageMember.turnNumber;
-            if (round.currentTurnNumber == turnNumber) {
-                List<StageMember> stageMemberList = stageMemberRepository.findByStageId(round.stageId);
-
-                // set round card
-                if (!optionalThemeAnswer.isPresent()) {
-                    storeRoundCardAndSendMessage(userId, roundId, card, turnNumber);
-                    prepareForNextMember(card, round, stageMemberList);
+            // This is for situation and comment post
+            if (!optionalThemeAnswer.isPresent()) {
+                storeRoundCardAndSendMessage(userId, roundId, card);
+                // This is for situation post
+                if(card.type.equals(CardType.SITUATION.name())){
+                    // send comment and option card to stage members except evil
+                    HashSet<String> stageMemberExceptEvil = new HashSet<>();
+                    for (StageMember member : stageMemberList) {
+                        if (!member.userId.equals(userId)) {
+                            stageMemberExceptEvil.add(member.userId);
+                        }
+                    }
+                    createAndSendCommentMessage(round, stageMemberExceptEvil);
+                // This is for the last comment post
+                } else if (roundCardList.size() == userStageMemberList.size() - 1){
+                    String evilUser = roundCardList.get(0).userId;
                     notificationService.publishToStompClient(round.stageId);
-
-                // set theme card
-                } else {
-                    String themeAnswer = optionalThemeAnswer.get();
-                    storeThemeCard(userId, card, round, themeAnswer);
-                    notificationService.publishToStompClient(round.stageId);
-                    return createAndSendThemeMessage(round, userId);
+                    return createAndSendThemeMessage(round, evilUser);
                 }
 
+            // This is for theme post
             } else {
-                final String notYourTurnMessage = messageSource.getMessage(
-                        "bot.round.set.round.card.not.your.turn",
-                        null,
-                        Locale.JAPANESE);
-                lineMessage.multicast(Collections.singleton(userId),
-                        Collections.singletonList(new TextMessage(notYourTurnMessage)));
+                String themeAnswer = optionalThemeAnswer.get();
+                storeThemeCard(userId, card, round, themeAnswer);
+                notificationService.publishToStompClient(round.stageId);
+                return createAndSendThemeMessage(round, userId);
             }
+        // This post is exception
         } else {
             final String errorMessage = messageSource.getMessage(
                     "bot.round.set.round.card.error",
@@ -192,14 +193,6 @@ public class RoundService {
                     Collections.singletonList(new TextMessage(errorMessage)));
         }
         return true;
-    }
-
-    void addStageTurnNumberToStageMember(List<StageMember> stageMemberList) {
-        Collections.shuffle(stageMemberList);
-        for (int i = 0; i < stageMemberList.size(); i++) {
-            stageMemberList.get(i).turnNumber = i;
-        }
-        stageMemberRepository.saveAll(stageMemberList);
     }
 
     boolean createNewRound(String stageId){
@@ -217,13 +210,17 @@ public class RoundService {
             // get situation card
             List<Card> situationList = cardRepository.findByTypeOrderByCreateDate(CardType.SITUATION.name());
             List<Long> roundIds = roundList.stream().map(r -> r.id).collect(Collectors.toList());
-            List<String> roundCardListForSituation =
+            List<RoundCard> roundCardListForSituation =
                     roundCardRepository
-                            .findByRoundIdInAndCardIdStartingWith(roundIds, "SITUATION")
-                            .stream().map(roundCard -> roundCard.cardId).collect((Collectors.toList()));
+                            .findByRoundIdInAndCardIdStartingWith(roundIds, "SITUATION");
+            List<String> situationCardListAlreadySentOnThisRound =
+                    roundCardListForSituation.stream().map(roundCard -> roundCard.cardId).collect((Collectors.toList()));
+
+            List<String> userIdListAlreadySentSituationCardOnThisRound =
+                    roundCardListForSituation.stream().map(roundCard -> roundCard.userId).collect((Collectors.toList()));
             for(int i = 0; i < situationList.size(); i++) {
                 Card card = situationList.get(i);
-                for(String cardId : roundCardListForSituation) {
+                for(String cardId : situationCardListAlreadySentOnThisRound) {
                     if(card.id.equals(cardId)) {
                         situationList.remove(i);
                     }
@@ -239,14 +236,13 @@ public class RoundService {
             round.status = RoundStatus.ON_GOING.name();
             round.situationCardId = situationCard.id;
             round.currentRoundNumber = roundList.size();
-            round.currentTurnNumber = roundList.size();
             round.createDate = Timestamp.valueOf(LocalDateTime.now());
             final Round resultRound = roundRepository.save(round);
             final Long roundId = resultRound.id;
 
             // send a situation card to evil
             final StageMember evil = stageMemberList.stream()
-                    .filter(s -> s.turnNumber == resultRound.currentRoundNumber)
+                    .filter(s -> userIdListAlreadySentSituationCardOnThisRound.contains(s.userId))
                     .findFirst()
                     .get();
 
@@ -292,13 +288,12 @@ public class RoundService {
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 
-    private void storeRoundCardAndSendMessage(String userId, Long roundId, Card card, Integer turnNumber) {
+    private void storeRoundCardAndSendMessage(String userId, Long roundId, Card card) {
         RoundCard roundCard = new RoundCard();
         roundCard.id = CommonUtils.getUUID();
         roundCard.roundId = roundId;
         roundCard.userId = userId;
         roundCard.cardId = card.id;
-        roundCard.turnNumber = turnNumber;
         roundCard.createDate = Timestamp.valueOf(LocalDateTime.now());
         roundCardRepository.save(roundCard);
 
@@ -321,34 +316,7 @@ public class RoundService {
         roundRetrospectiveRepository.save(roundRetrospective);
     }
 
-    private void prepareForNextMember(Card card, Round round, List<StageMember> stageMemberList) {
-        Integer nextCurrentTurnNumber;
-        if(!card.type.equals(CardType.THEME.name())) {
-            if (round.currentTurnNumber == (stageMemberList.size() - 1)) {
-                nextCurrentTurnNumber = 0;
-            } else {
-                nextCurrentTurnNumber = round.currentTurnNumber + 1;
-            }
-            round.currentTurnNumber = nextCurrentTurnNumber;
-            roundRepository.save(round);
-        } else {
-            nextCurrentTurnNumber = round.currentTurnNumber;
-        }
-        // next action
-        String nextUserId = stageMemberList
-                .stream()
-                .filter(s -> s.turnNumber == nextCurrentTurnNumber)
-                .map(s -> s.userId)
-                .findFirst().get();
-
-        if (nextCurrentTurnNumber != round.currentRoundNumber) {
-            createAndSendCommentMessage(round, nextUserId);
-        } else {
-            createAndSendThemeMessage(round, nextUserId);
-        }
-    }
-
-    private void createAndSendCommentMessage(Round round, String nextUserId) {
+    private void createAndSendCommentMessage(Round round, Set<String> userIds) {
         List<Card> commentList = cardRepository.findByTypeAndIdStartsWithOrderByCreateDate(CardType.COMMENT.name(), round.situationCardId);
         FlexMessage flexMessage = createCard(round.stageId, round.id, commentList);
         final String nextYourTurnMessage = messageSource.getMessage(
@@ -356,7 +324,7 @@ public class RoundService {
                 null,
                 Locale.JAPANESE);
         lineMessage.multicast(
-                Collections.singleton(nextUserId),
+                userIds,
                 Arrays.asList(flexMessage, new TextMessage(nextYourTurnMessage)));
     }
 
