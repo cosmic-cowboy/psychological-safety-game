@@ -45,15 +45,6 @@ public class GameController {
                     stageService.createStageTable(userId);
                     break;
 
-                case REQUEST_TO_START_STAGE:
-                    stageService.requestToStartStage(userId);
-                    break;
-
-                case CONFIRM_TO_START_STAGE:
-                    String stageId_CONFIRM_TO_START_ROUND = map.get(PostBackKeyName.STAGE.keyName);
-                    stageService.confirmToStartStage(userId, stageId_CONFIRM_TO_START_ROUND);
-                    break;
-
                 case SET_ROUND_CARD:
                     stageService.setRoundCard(
                             map.get(PostBackKeyName.STAGE.keyName),
@@ -69,10 +60,6 @@ public class GameController {
                             Long.parseLong(map.get(PostBackKeyName.ROUND.keyName)),
                             map.get(PostBackKeyName.CARD.keyName),
                             map.get(PostBackKeyName.THEME_ANSWER.keyName));
-                    break;
-
-                case REQUEST_TO_FINISH_STAGE:
-                    stageService.requestToFinishStage(userId);
                     break;
 
                 case CONFIRM_TO_FINISH_STAGE:

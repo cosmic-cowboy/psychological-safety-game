@@ -61,13 +61,10 @@ public class StageService {
                     Collections.singleton(userId),
                     Collections.singletonList(flexMessage));
         } else {
-            final String alreadyJoined = messageSource.getMessage(
-                    "bot.stage.already.joined",
-                    new Object[]{optionalStageMember.get().stageId},
-                    Locale.JAPANESE);
+            final FlexMessage flexMessage = createConfirmToFinishStageFlexMessage(optionalStageMember.get().stageId);
             lineMessage.multicast(
                     Collections.singleton(userId),
-                    Collections.singletonList(new TextMessage(alreadyJoined)));
+                    Collections.singletonList(flexMessage));
         }
     }
 
@@ -83,26 +80,6 @@ public class StageService {
             isSuccess = true;
         }
         return isSuccess;
-    }
-
-    public void requestToStartStage(String userId) {
-        Optional<Stage> optionalStage = getUserJoiningStageFromUserId(userId);
-        // check sender joining stage existing & check this stage is PARTICIPANTS_WANTED
-        if (optionalStage.isPresent()
-                && optionalStage.get().status.equals(StageStatus.PARTICIPANTS_WANTED.name())) {
-            final Stage stage = optionalStage.get();
-            final FlexMessage flexMessage = createConfirmToStartStageFlexMessage(stage);
-            lineMessage.multicast(
-                    Collections.singleton(userId),
-                    Collections.singletonList(flexMessage));
-        } else {
-            final String applyingStageNotFound = messageSource.getMessage(
-                    "bot.stage.start.request.error",
-                    null,
-                    Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId),
-                    Collections.singletonList(new TextMessage(applyingStageNotFound)));
-        }
     }
 
     public void confirmToStartStage(String userId, String stageId) {
@@ -129,18 +106,8 @@ public class StageService {
             if (!success) {
                 finishStage(stageId);
             }
-
             // notify changing stage status to web
             notificationService.publishToStompClient(stageId);
-
-        } else {
-            final String applyingStageNotFound = messageSource.getMessage(
-                    "bot.stage.start.confirm.error",
-                    null,
-                    Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId),
-                    Collections.singletonList(new TextMessage(applyingStageNotFound)));
-
         }
     }
 
@@ -159,23 +126,6 @@ public class StageService {
         notificationService.publishToStompClient(stageId);
         if (!success) {
             finishStage(stageId);
-        }
-    }
-
-    public void requestToFinishStage(String userId) {
-        Optional<Stage> optionalStage = getUserJoiningStageFromUserId(userId);
-        // check sender joining stage existing
-        if (optionalStage.isPresent()) {
-            final Stage stage = optionalStage.get();
-            final FlexMessage flexMessage = createConfirmToFinishStageFlexMessage(stage);
-            lineMessage.multicast(Collections.singleton(userId), Collections.singletonList(flexMessage));
-        } else {
-            final String applyingStageNotFound = messageSource.getMessage(
-                    "bot.stage.end.request.error",
-                    null,
-                    Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId),
-                    Collections.singletonList(new TextMessage(applyingStageNotFound)));
         }
     }
 
@@ -328,42 +278,10 @@ public class StageService {
         return new FlexMessage(successMessage, bubble);
     }
 
-    private FlexMessage createConfirmToStartStageFlexMessage(Stage stage) {
-        final String buttonTitle = messageSource.getMessage(
-                "bot.stage.start.request.title",
-                new Object[]{stage.id},
-                Locale.JAPANESE);
-        final String buttonText = messageSource.getMessage(
-                "bot.stage.start.request.text",
-                null,
-                Locale.JAPANESE);
-
-        final String postbackLabel = messageSource.getMessage(
-                "bot.stage.start.request.button.label",
-                null,
-                Locale.JAPANESE);
-        final String postbackText = messageSource.getMessage(
-                "bot.stage.start.request.button.text",
-                new Object[]{stage.id},
-                Locale.JAPANESE);
-        final String postbackData = PostBackKeyName.ACTION.keyName + "="
-                + PostBackAction.CONFIRM_TO_START_STAGE.name() + "&"
-                + PostBackKeyName.STAGE.keyName + "=" + stage.id;
-
-        final String altText = messageSource.getMessage(
-                "bot.stage.start.request.altText",
-                null,
-                Locale.JAPANESE);
-
-        return createFlexButton(
-                buttonTitle, buttonText, postbackLabel,
-                postbackText, postbackData, altText);
-    }
-
-    private FlexMessage createConfirmToFinishStageFlexMessage(Stage stage) {
+    private FlexMessage createConfirmToFinishStageFlexMessage(String stageId) {
         final String buttonTitle = messageSource.getMessage(
                 "bot.stage.end.request.title",
-                new Object[]{stage.id},
+                new Object[]{stageId},
                 Locale.JAPANESE);
         final String buttonText = messageSource.getMessage(
                 "bot.stage.end.request.text",
@@ -375,22 +293,22 @@ public class StageService {
                 Locale.JAPANESE);
         final String postbackText = messageSource.getMessage(
                 "bot.stage.end.request.button.text",
-                new Object[]{stage.id},
+                new Object[]{stageId},
                 Locale.JAPANESE);
         final String postbackData = PostBackKeyName.ACTION.keyName + "="
                 + PostBackAction.CONFIRM_TO_FINISH_STAGE.name() + "&"
-                + PostBackKeyName.STAGE.keyName + "=" + stage.id;
+                + PostBackKeyName.STAGE.keyName + "=" + stageId;
         final String altText = messageSource.getMessage(
                 "bot.stage.end.request.altText",
                 null,
                 Locale.JAPANESE);
 
-        return createFlexButton(
+        return createFlexButtonForFinish(
                 buttonTitle, buttonText, postbackLabel,
                 postbackText, postbackData, altText);
     }
 
-    private FlexMessage createFlexButton(
+    private FlexMessage createFlexButtonForFinish(
             String buttonTitle,
             String buttonText,
             String postbackLabel,
@@ -413,6 +331,7 @@ public class StageService {
 
         final Button button =
                 Button.builder()
+                        .color("#dc3545")
                         .style(Button.ButtonStyle.PRIMARY)
                         .action(new PostbackAction(
                                 postbackLabel, postbackData, postbackText))
