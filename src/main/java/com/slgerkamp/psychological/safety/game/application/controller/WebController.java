@@ -44,6 +44,8 @@ public class WebController {
 
         if (!isMember) {
             stageService.requestToJoinStageForWeb(stage.id, oAuth2Authentication);
+            // updated stage member list
+            stageMemberList = stageMemberService.getStageMemberForDisplayStageMember(stage.id);
         }
         createModelForStage(model, stage, stageMemberList);
         return "stage";
