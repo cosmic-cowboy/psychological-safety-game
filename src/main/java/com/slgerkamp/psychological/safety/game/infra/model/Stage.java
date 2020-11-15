@@ -19,7 +19,6 @@ public class Stage {
 
     @Id
     public String id;
-    public String password;
     public String name;
     public String status;
     public Timestamp createDate;

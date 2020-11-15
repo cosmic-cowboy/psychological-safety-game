@@ -151,7 +151,7 @@ public class StageMemberService {
             final Stage stage) {
         final String url = CommonUtils.createStageUrl(stage.id);
         final String correctPassword = messageSource.getMessage(
-                "bot.stage.input.password.correct.password",
+                "bot.stage.input.join.new.stage",
                 new Object[]{stage.id, url},
                 Locale.JAPANESE);
         try {

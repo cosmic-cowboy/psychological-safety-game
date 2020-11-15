@@ -73,17 +73,14 @@ public class StageService {
 
     public Boolean requestToJoinStageForWeb(
             final String stageId,
-            final OAuth2Authentication oAuth2Authentication,
-            final String password) {
+            final OAuth2Authentication oAuth2Authentication) {
         Boolean isSuccess = false;
         // fetch stagesParticipantsWanted
         Optional<Stage> optionalStage = getParticipantsWantedStage(stageId);
         if (optionalStage.isPresent()) {
             Stage stage = optionalStage.get();
-            if (stage.password.equals(password)) {
-                stageMemberService.addMemberAndSendMessageToMemberFromWeb(oAuth2Authentication, stage);
-                isSuccess = true;
-            }
+            stageMemberService.addMemberAndSendMessageToMemberFromWeb(oAuth2Authentication, stage);
+            isSuccess = true;
         }
         return isSuccess;
     }
@@ -250,11 +247,9 @@ public class StageService {
 
     private Stage createStageTable() {
         final String stageId = CommonUtils.getUUID();
-        final String password = CommonUtils.get6DigitCode();
         final Timestamp now = Timestamp.valueOf(LocalDateTime.now());
         final Stage stage = new Stage();
         stage.id = stageId;
-        stage.password = password;
         stage.createDate = now;
         stage.status = StageStatus.PARTICIPANTS_WANTED.name();
         stage.updateDate = now;
