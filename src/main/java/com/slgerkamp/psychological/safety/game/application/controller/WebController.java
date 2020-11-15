@@ -52,25 +52,11 @@ public class WebController {
         return "stage";
     }
 
-    @PostMapping("/stage/{stageId}/start")
-    public String start(@PathVariable String stageId, final OAuth2Authentication oAuth2Authentication) {
-        final String userId = getUserId(oAuth2Authentication);
-        stageService.confirmToStartStage(userId, stageId);
-        return "stage";
-    }
-
-
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
 ///////////////////////  private method  //////////////////////////
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////
-
-    private String getUserId(OAuth2Authentication oAuth2Authentication) {
-        Map<String, Object> properties =
-                (Map<String, Object>) oAuth2Authentication.getUserAuthentication().getDetails();
-        return (String) properties.get("userId");
-    }
 
     private boolean isMember(List<StageMember> stageMemberList, final OAuth2Authentication oAuth2Authentication) {
 

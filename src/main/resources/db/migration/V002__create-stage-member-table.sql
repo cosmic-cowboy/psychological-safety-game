@@ -7,6 +7,5 @@ CREATE TABLE stage_member (
   status       VARCHAR NOT NULL,
   role       VARCHAR NOT NULL,
   create_date  TIMESTAMP NOT NULL,
-  UNIQUE(stage_id, user_id),
   CONSTRAINT foreign_key_stage_member_stage_id FOREIGN KEY (stage_id) REFERENCES stage(id)
 );
