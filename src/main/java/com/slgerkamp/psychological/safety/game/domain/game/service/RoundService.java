@@ -16,11 +16,14 @@ import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
 import com.linecorp.bot.model.message.quickreply.QuickReply;
 import com.linecorp.bot.model.message.quickreply.QuickReplyItem;
+import com.slgerkamp.psychological.safety.game.application.controller.GameController;
 import com.slgerkamp.psychological.safety.game.application.model.RoundCardForView;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
 import com.slgerkamp.psychological.safety.game.infra.message.LineMessage;
 import com.slgerkamp.psychological.safety.game.infra.model.*;
 import com.slgerkamp.psychological.safety.game.infra.utils.CommonUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
@@ -147,11 +150,11 @@ public class RoundService {
 
         Optional<Round> optionalRound = roundRepository.findById(roundId);
         Card card = cardRepository.findById(cardId).get();
-        List<StageMember> userStageMemberList =
+        List<StageMember> userStageMemberListWaitingForJoining =
                 stageMemberRepository.findByUserIdAndStatus(userId, StageMemberStatus.JOINING.name());
 
         // check if stage is active, check if this post is normal
-        if (optionalRound.isPresent() && userStageMemberList.size() > 0) {
+        if (optionalRound.isPresent() && userStageMemberListWaitingForJoining.size() > 0) {
             Round round = optionalRound.get();
             List<StageMember> stageMemberList = stageMemberRepository.findByStageId(round.stageId);
             List<RoundCard> roundCardList = roundCardRepository.findByRoundIdInOrderByCreateDateAsc(Collections.singletonList(roundId));
@@ -170,7 +173,7 @@ public class RoundService {
                     }
                     createAndSendCommentMessage(round, stageMemberExceptEvil);
                 // This is for the last comment post
-                } else if (roundCardList.size() == userStageMemberList.size() - 1){
+                } else if (roundCardList.size() >= stageMemberList.size() - 1){
                     String evilUser = roundCardList.get(0).userId;
                     notificationService.publishToStompClient(round.stageId);
                     return createAndSendThemeMessage(round, evilUser);
@@ -241,11 +244,15 @@ public class RoundService {
             final Long roundId = resultRound.id;
 
             // send a situation card to evil
-            final StageMember evil = stageMemberList.stream()
-                    .filter(s -> userIdListAlreadySentSituationCardOnThisRound.contains(s.userId))
-                    .findFirst()
-                    .get();
-
+            final StageMember evil;
+            if (userIdListAlreadySentSituationCardOnThisRound.isEmpty()) {
+                evil = stageMemberList.get(0);
+            } else {
+                evil = stageMemberList.stream()
+                        .filter(s -> userIdListAlreadySentSituationCardOnThisRound.contains(s.userId))
+                        .findFirst()
+                        .get();
+            }
             final FlexMessage message = createCard(stageId, roundId, Collections.singletonList(situationCard));
             final String nextYourTurnMessage = messageSource.getMessage(
                     "bot.round.set.round.card.next.your.turn",
