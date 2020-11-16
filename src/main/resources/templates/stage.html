@@ -4,6 +4,8 @@
         <meta charset="UTF-8"  />
         <meta name="x_data_subscription_url" th:content="${subscriptionUrl}"/>
         <meta name="x_data_start_post_url" th:content="${startPostUrl}"/>
+        <meta th:name="_csrf" th:content="${_csrf.token}"/>
+        <meta th:name="_csrf_header" th:content="${_csrf.headerName}"/>
 
         <!-- Bootstrap CSS -->
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -73,8 +75,8 @@
 
                                         </h4>
                                     </div>
-                                    <div class="col-lg-12">
-                                        <a id="startGame" href="#" role="button" class="btn btn-danger btn-lg">ゲームをスタートさせる</a>
+                                    <div class="col-lg-12 text-center">
+                                        <button id="startGame" href="#" role="button" class="btn btn-danger btn-lg">ゲームをスタートさせる</button>
                                     </div>
                                 </div>
 

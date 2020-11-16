@@ -1,7 +1,8 @@
 let stompClient = null;
 let subscriptionUrl = $("meta[name=x_data_subscription_url]").attr("content");
 let startPostUrl = $("meta[name=x_data_start_post_url]").attr("content");
-
+let token = $("meta[name='_csrf']").attr("content");
+let header = $("meta[name='_csrf_header']").attr("content");
 
 function connect() {
     let socket = new SockJS('/websocket');
@@ -25,13 +26,16 @@ function disconnect() {
 function postForStartingGame(){
     $.ajax({
         type : "POST",
-        url : startPostUrl,
-        contentType : "application/json",
-        dataType : "JSON"
+        url : startPostUrl
     }).done(function() {
         location.reload();
-    }).fail(function() {
+    }).fail(function(jqXHR, textStatus, errorThrown){
+        console.log("jqXHR          : " + jqXHR.status); // HTTPステータスを表示
+        console.log("textStatus     : " + textStatus);    // タイムアウト、パースエラーなどのエラー情報を表示
+        console.log("errorThrown    : " + errorThrown.message);
         alert("スタートに失敗しました。ページをリロードしてもう一度ゲームをスタートさせてください");
+    }).always(function() {
+        console.log('complete');
     });
 
 }
@@ -50,8 +54,13 @@ $(function () {
     }
     $('[data-toggle="tooltip"]').tooltip();
 
+    $(document).ajaxSend(function(e, xhr, options) {
+        xhr.setRequestHeader(header, token);
+    });
+
     let startGame = $('#startGame');
-    startGame.on('click', 'button', function(){
+    startGame.on('click', function(e){
+        e.preventDefault();
         postForStartingGame();
     })
 
