@@ -130,7 +130,7 @@ public class StageService {
                 roundService.storeRoundCardOrThemeCardAndSendMessage(replyToken, userId, roundId, cardId, Optional.empty());
         notificationService.publishToStompClient(stageId);
         if (!success) {
-            finishStage(Optional.empty(), stageId);
+            finishStage(Optional.of(replyToken), stageId);
         }
     }
 
@@ -140,7 +140,7 @@ public class StageService {
         notificationService.publishToStompClient(stageId);
         if (!success) {
             // because message sender is not stage creator
-            finishStage(Optional.empty(), stageId);
+            finishStage(Optional.of(replyToken), stageId);
         }
     }
 
