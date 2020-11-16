@@ -8,6 +8,7 @@ import com.linecorp.bot.spring.boot.annotation.LineMessageHandler;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
 import com.slgerkamp.psychological.safety.game.domain.game.service.RoundService;
 import com.slgerkamp.psychological.safety.game.domain.game.service.StageService;
+import com.slgerkamp.psychological.safety.game.infra.message.ReplyToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,7 @@ public class GameController {
     public void handlePostbackEvent(PostbackEvent event) {
 
         final String userId = event.getSource().getUserId();
+        final ReplyToken replyToken = new ReplyToken(event.getReplyToken());
         final Map<String, String> map = parseMap(event.getPostbackContent().getData());
 
         if (map.containsKey(PostBackKeyName.ACTION.keyName)) {
@@ -42,11 +44,12 @@ public class GameController {
 
             switch (postBackAction) {
                 case CREATE:
-                    stageService.createStageTable(userId);
+                    stageService.createStageTable(replyToken, userId);
                     break;
 
                 case SET_ROUND_CARD:
                     stageService.setRoundCard(
+                            replyToken,
                             map.get(PostBackKeyName.STAGE.keyName),
                             userId,
                             Long.parseLong(map.get(PostBackKeyName.ROUND.keyName)),
@@ -55,6 +58,7 @@ public class GameController {
 
                 case SET_THEME_CARD:
                     stageService.setThemeCard(
+                            replyToken,
                             map.get(PostBackKeyName.STAGE.keyName),
                             userId,
                             Long.parseLong(map.get(PostBackKeyName.ROUND.keyName)),
@@ -64,7 +68,7 @@ public class GameController {
 
                 case CONFIRM_TO_FINISH_STAGE:
                     String stageId_CONFIRM_TO_FINISH_ROUND = map.get(PostBackKeyName.STAGE.keyName);
-                    stageService.confirmToFinishStage(userId, stageId_CONFIRM_TO_FINISH_ROUND);
+                    stageService.confirmToFinishStage(replyToken, userId, stageId_CONFIRM_TO_FINISH_ROUND);
                     break;
 
                 default:

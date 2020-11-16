@@ -20,6 +20,7 @@ import com.slgerkamp.psychological.safety.game.application.controller.GameContro
 import com.slgerkamp.psychological.safety.game.application.model.RoundCardForView;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
 import com.slgerkamp.psychological.safety.game.infra.message.LineMessage;
+import com.slgerkamp.psychological.safety.game.infra.message.ReplyToken;
 import com.slgerkamp.psychological.safety.game.infra.model.*;
 import com.slgerkamp.psychological.safety.game.infra.utils.CommonUtils;
 import org.slf4j.Logger;
@@ -146,7 +147,7 @@ public class RoundService {
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 
-    boolean storeRoundCardOrThemeCardAndSendMessage(String userId, Long roundId, String cardId, Optional<String> optionalThemeAnswer) {
+    boolean storeRoundCardOrThemeCardAndSendMessage(ReplyToken replyToken, String userId, Long roundId, String cardId, Optional<String> optionalThemeAnswer) {
 
         Optional<Round> optionalRound = roundRepository.findById(roundId);
         Card card = cardRepository.findById(cardId).get();
@@ -161,7 +162,7 @@ public class RoundService {
 
             // This is for situation and comment post
             if (!optionalThemeAnswer.isPresent()) {
-                storeRoundCardAndSendMessage(userId, roundId, card);
+                storeRoundCardAndSendMessage(replyToken, userId, roundId, card);
                 // This is for situation post
                 if(card.type.equals(CardType.SITUATION.name())){
                     // send comment and option card to stage members except evil
@@ -178,13 +179,13 @@ public class RoundService {
                     } else {
                         evilUser = roundCardList.get(0).userId;
                     }
-                    return createAndSendThemeMessage(round, evilUser);
+                    return createAndSendThemeMessage(Optional.empty(), round, evilUser);
                 }
             // This is for theme post
             } else {
                 String themeAnswer = optionalThemeAnswer.get();
                 storeThemeCard(userId, card, round, themeAnswer);
-                return createAndSendThemeMessage(round, userId);
+                return createAndSendThemeMessage(Optional.of(replyToken), round, userId);
             }
         // This post is exception
         } else {
@@ -192,8 +193,7 @@ public class RoundService {
                     "bot.round.set.round.card.error",
                     null,
                     Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId),
-                    Collections.singletonList(new TextMessage(errorMessage)));
+            lineMessage.reply(replyToken, Collections.singletonList(new TextMessage(errorMessage)));
         }
         return true;
     }
@@ -312,7 +312,7 @@ public class RoundService {
         return stageMemberExceptEvil;
     }
 
-    private void storeRoundCardAndSendMessage(String userId, Long roundId, Card card) {
+    private void storeRoundCardAndSendMessage(ReplyToken replyToken, String userId, Long roundId, Card card) {
         RoundCard roundCard = new RoundCard();
         roundCard.id = CommonUtils.getUUID();
         roundCard.roundId = roundId;
@@ -325,8 +325,7 @@ public class RoundService {
                 "bot.round.set.round.card.success",
                 null,
                 Locale.JAPANESE);
-        lineMessage.multicast(Collections.singleton(userId),
-                Collections.singletonList(new TextMessage(successMessage)));
+        lineMessage.reply(replyToken, Collections.singletonList(new TextMessage(successMessage)));
     }
 
     private void storeThemeCard(String userId, Card card, Round round, String themeAnswer) {
@@ -352,7 +351,7 @@ public class RoundService {
                 Arrays.asList(flexMessage, new TextMessage(nextYourTurnMessage)));
     }
 
-    private boolean createAndSendThemeMessage(Round round, String userId) {
+    private boolean createAndSendThemeMessage(Optional<ReplyToken> optionalReplyToken, Round round, String userId) {
         List<Card> themeList = cardRepository.findByTypeOrderByCreateDate(CardType.THEME.name());
         List<RoundRetrospective> roundRetrospectives =
                 roundRetrospectiveRepository.findByRoundIdOrderByCreateDateDesc(round.id);
@@ -378,7 +377,11 @@ public class RoundService {
         final QuickReply quickReply = __createThemeQuickReply(round.stageId, round.id, themeCard);
         messageList.add(TextMessage.builder().text(question).quickReply(quickReply).build());
 
-        lineMessage.multicast(Collections.singleton(userId),messageList);
+        if (optionalReplyToken.isPresent()){
+            lineMessage.reply(optionalReplyToken.get(),messageList);
+        } else {
+            lineMessage.multicast(Collections.singleton(userId),messageList);
+        }
         return true;
     }
 

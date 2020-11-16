@@ -13,6 +13,7 @@ import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
 import com.slgerkamp.psychological.safety.game.domain.game.*;
 import com.slgerkamp.psychological.safety.game.infra.message.LineMessage;
+import com.slgerkamp.psychological.safety.game.infra.message.ReplyToken;
 import com.slgerkamp.psychological.safety.game.infra.model.*;
 import com.slgerkamp.psychological.safety.game.infra.utils.CommonUtils;
 import com.slgerkamp.psychological.safety.game.infra.utils.QrCodeGenerator;
@@ -46,7 +47,7 @@ public class StageService {
     @Autowired
     private QrCodeGenerator qrCodeGenerator;
 
-    public void createStageTable(String userId) {
+    public void createStageTable(ReplyToken replyToken, String userId) {
 
         Optional<StageMember> optionalUserJoiningStageFromUserId =
                 stageMemberService.getUserJoiningStageFromUserId(userId);
@@ -70,17 +71,13 @@ public class StageService {
 
             final String dashboardUrl = CommonUtils.createStageDashboardUrl(result_stage.id);
             final FlexMessage flexMessage = createSuccessFlexMessage(dashboardUrl);
-            lineMessage.multicast(
-                    Collections.singleton(userId),
-                    Collections.singletonList(flexMessage));
+            lineMessage.reply(replyToken, Collections.singletonList(flexMessage));
 
         // user join a stage as a creator
         } else {
             final FlexMessage flexMessage =
                     createConfirmToFinishStageFlexMessageForCreator(optionalUserJoiningStageFromUserId.get().stageId);
-            lineMessage.multicast(
-                    Collections.singleton(userId),
-                    Collections.singletonList(flexMessage));
+            lineMessage.reply(replyToken, Collections.singletonList(flexMessage));
         }
     }
 
@@ -120,43 +117,44 @@ public class StageService {
             // set cards for this stage
             boolean success = roundService.createNewRound(stageId);
             if (!success) {
-                finishStage(stageId);
+                // because message sender is not stage creator
+                finishStage(Optional.empty(), stageId);
             }
             // notify changing stage status to web
             notificationService.publishToStompClient(stageId);
         }
     }
 
-    public void setRoundCard(String stageId, String userId, Long roundId, String cardId) {
+    public void setRoundCard(ReplyToken replyToken, String stageId, String userId, Long roundId, String cardId) {
         boolean success =
-                roundService.storeRoundCardOrThemeCardAndSendMessage(userId, roundId, cardId, Optional.empty());
+                roundService.storeRoundCardOrThemeCardAndSendMessage(replyToken, userId, roundId, cardId, Optional.empty());
         notificationService.publishToStompClient(stageId);
         if (!success) {
-            finishStage(stageId);
+            finishStage(Optional.empty(), stageId);
         }
     }
 
-    public void setThemeCard(String stageId, String userId, Long roundId, String cardId, String themeAnswer) {
+    public void setThemeCard(ReplyToken replyToken, String stageId, String userId, Long roundId, String cardId, String themeAnswer) {
         boolean success =
-                roundService.storeRoundCardOrThemeCardAndSendMessage(userId, roundId, cardId, Optional.of(themeAnswer));
+                roundService.storeRoundCardOrThemeCardAndSendMessage(replyToken,userId, roundId, cardId, Optional.of(themeAnswer));
         notificationService.publishToStompClient(stageId);
         if (!success) {
-            finishStage(stageId);
+            // because message sender is not stage creator
+            finishStage(Optional.empty(), stageId);
         }
     }
 
-    public void confirmToFinishStage(String userId, String stageId) {
+    public void confirmToFinishStage(ReplyToken replyToken, String userId, String stageId) {
         Optional<Stage> optionalStage = getUserJoiningStageFromUserId(userId);
         // check sender joining stage existing
         if (optionalStage.isPresent() && optionalStage.get().id.equals(stageId)) {
-            finishStage(stageId);
+            finishStage(Optional.of(replyToken), stageId);
         } else {
             final String applyingStageNotFound = messageSource.getMessage(
                     "bot.stage.end.confirm.error",
                     null,
                     Locale.JAPANESE);
-            lineMessage.multicast(Collections.singleton(userId),
-                    Collections.singletonList(new TextMessage(applyingStageNotFound)));
+            lineMessage.reply(replyToken, Collections.singletonList(new TextMessage(applyingStageNotFound)));
         }
     }
 
@@ -171,7 +169,7 @@ public class StageService {
 ///////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////
 
-    private void finishStage(String stageId) {
+    private void finishStage(Optional<ReplyToken> optionalReplyToken, String stageId) {
         roundService.finishAllRounds(stageId);
         final Optional<Stage> optionalStage = stageRepository.findById(stageId);
         if (optionalStage.isPresent()) {
@@ -180,16 +178,15 @@ public class StageService {
             currentStage.status = StageStatus.END_GAME.name();
             currentStage.updateDate = Timestamp.valueOf(LocalDateTime.now());
             stageRepository.save(currentStage);
+            stageMemberService.terminatedStageMembers(stageId);
 
-            List<StageMember> stageMemberList = stageMemberService.terminatedStageMembers(stageId);
-
-            Set<String> memberSet = stageMemberList.stream().map(s -> s.userId).collect(Collectors.toSet());
             final String successMessage = messageSource.getMessage(
                     "bot.stage.end.confirm.success",
                     null,
                     Locale.JAPANESE);
-            lineMessage.multicast(memberSet,
-                    Collections.singletonList(new TextMessage(successMessage)));
+            optionalReplyToken.ifPresent(replyToken ->
+                    lineMessage.reply(replyToken, Collections.singletonList(new TextMessage(successMessage))));
+
             notificationService.publishToStompClient(stageId);
         }
     }

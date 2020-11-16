@@ -2,6 +2,7 @@ package com.slgerkamp.psychological.safety.game.infra.message;
 
 import com.linecorp.bot.client.LineMessagingClient;
 import com.linecorp.bot.model.Multicast;
+import com.linecorp.bot.model.ReplyMessage;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.profile.UserProfileResponse;
 import lombok.NonNull;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -35,4 +37,11 @@ public class LineMessage {
         }
     }
 
+    public void reply(@NonNull ReplyToken replyToken, @NonNull List<Message> messages) {
+        try {
+            lineMessagingClient.replyMessage(new ReplyMessage(replyToken.value, messages)).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
