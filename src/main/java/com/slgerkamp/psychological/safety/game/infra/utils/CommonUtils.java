@@ -17,8 +17,14 @@ public final class CommonUtils {
         return String.format("%06d", rnd.nextInt(999999));
     }
 
-    public static String createStageUrl(String stageId) {
+    public static String createStageDashboardUrl(String stageId) {
         final String url = "https://psychological-safety-game.herokuapp.com/stage/" + stageId;
         return url;
     }
+
+    public static String createStageJoinUrl(String stageId) {
+        final String url = "https://psychological-safety-game.herokuapp.com/stage/" + stageId + "/join";
+        return url;
+    }
+
 }

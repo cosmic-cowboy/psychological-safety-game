@@ -15,7 +15,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.List;
 import java.util.Locale;
@@ -37,7 +36,23 @@ public class WebController {
     @GetMapping("/stage/{stageId}")
     public String stage(@PathVariable String stageId,
                         Model model,
-                        final OAuth2Authentication oAuth2Authentication){
+                        final OAuth2Authentication oAuth2Authentication) {
+        // (common all methods in this class) get stage info and check stageMember or not
+        Stage stage = stageService.getStage(stageId);
+        List<StageMember> stageMemberList = stageMemberService.getStageMemberForDisplayStageMember(stage.id);
+        boolean isMember = isMember(stageMemberList, oAuth2Authentication);
+
+        if (!isMember) {
+            return "forward://stage/" + stageId + "/join";
+        }
+        createModelForStage(model, stage, stageMemberList);
+        return "stage";
+    }
+
+    @GetMapping("/stage/{stageId}/join")
+    public String joinStage(@PathVariable String stageId,
+                            Model model,
+                            final OAuth2Authentication oAuth2Authentication) {
         // (common all methods in this class) get stage info and check stageMember or not
         Stage stage = stageService.getStage(stageId);
         List<StageMember> stageMemberList = stageMemberService.getStageMemberForDisplayStageMember(stage.id);
@@ -48,8 +63,9 @@ public class WebController {
             // updated stage member list
             stageMemberList = stageMemberService.getStageMemberForDisplayStageMember(stage.id);
         }
-        createModelForStage(model, stage, stageMemberList);
-        return "stage";
+        createModelForJoiningStage(model, stage, stageMemberList);
+        return "stageRegistrationDone";
+
     }
 
 ///////////////////////////////////////////////////////////////////
@@ -63,7 +79,7 @@ public class WebController {
         Map<String, Object> properties = (Map<String, Object>) oAuth2Authentication.getUserAuthentication().getDetails();
         final String userId = (String) properties.get("userId");
         boolean isMember = false;
-        for(StageMember stageMember : stageMemberList) {
+        for (StageMember stageMember : stageMemberList) {
             if (stageMember.userId.equals(userId)) {
                 isMember = true;
             }
@@ -92,7 +108,20 @@ public class WebController {
         model.addAttribute("subscriptionUrl", subscriptionUrl);
         model.addAttribute("startPostUrl", "/stage/" + stage.id + "/start");
 
-        for(StageMember stageMember : stageMemberList){
+        for (StageMember stageMember : stageMemberList) {
+            model.addAttribute(stageMember.userId, stageMember);
+        }
+    }
+
+    private void createModelForJoiningStage(Model model, Stage stage, List<StageMember> stageMemberList) {
+        final String webStageTitlePrefix = messageSource.getMessage(
+                "web.stage.title.prefix",
+                null,
+                Locale.JAPANESE);
+        model.addAttribute("stageTitle", webStageTitlePrefix + stage.id);
+        model.addAttribute("stageStatus", stage.status);
+        model.addAttribute("stageMemberList", stageMemberList);
+        for (StageMember stageMember : stageMemberList) {
             model.addAttribute(stageMember.userId, stageMember);
         }
     }

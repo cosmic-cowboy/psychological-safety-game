@@ -24,7 +24,7 @@ public class APIController {
 
     @RequestMapping("/stage/{stageId}/qrcode")
     public ResponseEntity<?> image(@PathVariable String stageId) {
-        InputStream in = qrCodeGenerator.read(stageId);
+        InputStream in = qrCodeGenerator.readStageJoinUrlQrCode(stageId);
         HttpHeaders headers = new HttpHeaders();
         headers.setPragma("");
         return new ResponseEntity<Resource>(
@@ -35,9 +35,10 @@ public class APIController {
 
     @PostMapping("/stage/{stageId}/start")
     @ResponseStatus(HttpStatus.CREATED)
-    public void start(@PathVariable String stageId, final OAuth2Authentication oAuth2Authentication) {
+    public String start(@PathVariable String stageId, final OAuth2Authentication oAuth2Authentication) {
         final String userId = getUserId(oAuth2Authentication);
-        stageService.confirmToStartStage(userId, stageId);
+        stageService.startStage(userId, stageId);
+        return "ok";
     }
 
 ///////////////////////////////////////////////////////////////////

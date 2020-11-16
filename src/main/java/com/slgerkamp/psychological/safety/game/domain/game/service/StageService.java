@@ -65,9 +65,11 @@ public class StageService {
             // createStage
             final Stage result_stage = createStageTable();
             stageMemberService.addCreator(userId, result_stage.id);
-            final String url = CommonUtils.createStageUrl(result_stage.id);
-            qrCodeGenerator.create(url, result_stage.id);
-            final FlexMessage flexMessage = createSuccessFlexMessage(url);
+
+            qrCodeGenerator.createStageJoinUrlQrCode(result_stage.id);
+
+            final String dashboardUrl = CommonUtils.createStageDashboardUrl(result_stage.id);
+            final FlexMessage flexMessage = createSuccessFlexMessage(dashboardUrl);
             lineMessage.multicast(
                     Collections.singleton(userId),
                     Collections.singletonList(flexMessage));
@@ -96,7 +98,7 @@ public class StageService {
         return isSuccess;
     }
 
-    public void confirmToStartStage(String userId, String stageId) {
+    public void startStage(String userId, String stageId) {
         Optional<Stage> optionalStage = getUserJoiningStageFromUserId(userId);
 
         // check sender joining stage existing & check this stage is PARTICIPANTS_WANTED

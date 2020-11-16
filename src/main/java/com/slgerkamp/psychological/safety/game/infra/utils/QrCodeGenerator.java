@@ -20,9 +20,27 @@ import java.util.Map;
 @Component
 public class QrCodeGenerator {
 
-    public void create(String url, String stageId) {
-        final int size = 150;
+
+    public void createStageJoinUrlQrCode(String stageId){
+        final String url = CommonUtils.createStageJoinUrl(stageId);
+        final String path = stageId;
+        create(url, path);
+    }
+    public InputStream readStageJoinUrlQrCode(String stageId) {
+        InputStream is;
         final String filePath = createPath(stageId);
+        try {
+            is = new FileInputStream(filePath);
+        } catch (FileNotFoundException e) {
+            createStageJoinUrlQrCode(stageId);
+            is = readStageJoinUrlQrCode(stageId);
+        }
+        return is;
+    }
+
+    private void create(String url, String parameterFilePath) {
+        final int size = 150;
+        final String filePath = createPath(parameterFilePath);
 
         QRCodeWriter writer = new QRCodeWriter();
         Path path = FileSystems.getDefault().getPath(filePath);
@@ -35,19 +53,6 @@ public class QrCodeGenerator {
         } catch (WriterException | IOException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public InputStream read(String stageId) {
-        InputStream is;
-        final String filePath = createPath(stageId);
-        try {
-            is = new FileInputStream(filePath);
-        } catch (FileNotFoundException e) {
-            final String url = CommonUtils.createStageUrl(stageId);
-            create(url, stageId);
-            is = read(stageId);
-        }
-        return is;
     }
 
     private String createPath(String stageId) {

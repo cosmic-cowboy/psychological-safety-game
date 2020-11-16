@@ -1,0 +1,91 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8"  />
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <link rel="stylesheet" href="../../css/stage.css" />
+        <link href="https://fonts.googleapis.com/css?family=Lobster&display=swap" rel="stylesheet">
+        <title>Psychological Safety Game Bot</title>
+    </head>
+    <body>
+        <!-- Image and text -->
+        <nav class="navbar navbar-light bg-white">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-11 col-xl-10">
+                        <a class="navbar-brand lobster" href="#">
+                            Psychological Safety Game Bot
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-11 col-xl-10">
+                    <div class="page-header">
+                        <!-- Stage info starts-->
+                        <h4 class="text-center" th:text="${stageTitle}"></h4>
+                        <div class="d-flex justify-content-center">
+                            <ul class="avatars">
+                                <li th:each="stageMember : ${stageMemberList}">
+                                    <a href="#" data-toggle="tooltip" data-placement="top" th:title="${stageMember.userName}">
+                                        <img th:alt="${stageMember.userName}" class="avatar" th:src="${stageMember.pictureUrl}">
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Stage info ends -->
+                        <!-- Introduction starts -->
+                        <div id="stageIntroduction" class="page-content">
+                            <div class="content-list">
+                                <div class="content-list-body row">
+                                    <div class="col-lg-12">
+                                        <h2 class="text-center">ゲームに参加するみなさんへ</h2>
+                                        <h5 class="top-lead">
+                                            Psychological Safety Game Botへようこそ！<br>
+                                            ゲームに参加される方は、「ゲームに参加する」ボタンをタップしてください。<br>
+                                            LINE公式アカウント（Psychological Safety Game Bot）を開います。LINE公式アカウントを開いた状態でお待ち下さい。<br>
+                                            参加者が全員揃ったら、ファシリテーターの方がゲームをスタートさせます。<br>
+                                            参加者が全員揃うまで、いましばらくお待ち下さい。<br>
+                                        </h5>
+                                    </div>
+                                    <div class="div-center">
+                                        <a class="btn btn-primary btn-lg" href="https://lin.ee/AY9gihz" role="button">ゲームに参加する</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="content-list">
+                                <div class="content-list-body row">
+                                    <div class="col-lg-12">
+                                        <h2 class="text-center">ファシリテーションされる方へ</h2>
+                                        <h5 class="top-lead">
+                                            ファシリテーションご苦労さまです。<br>
+                                            ボタンをタップすると、ダッシュボード画面に遷移します。<br>
+                                            参加者が全員揃いましたら、「ゲームをスタートさせる」をクリックしてください。
+                                        </h5>
+                                    </div>
+                                    <div class="div-center">
+                                        <a class="btn btn-danger" href="https://lin.ee/AY9gihz" role="button">ゲームをファシリテーションするためにDashboardを開く</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <!-- Introduction end -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p class="text-muted text-center lobster">
+                Inspired by <a href="https://games.yattom.jp/safety">Psychological Safety Game</a>
+            </p>
+        </div>
+    </body>
+</html>

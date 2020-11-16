@@ -158,10 +158,9 @@ public class StageMemberService {
     private void sendMessageForJoiningMember_doNotCallDirectly(
             final String userId,
             final Stage stage) {
-        final String url = CommonUtils.createStageUrl(stage.id);
         final String joinNewStage = messageSource.getMessage(
                 "bot.stage.input.join.new.stage",
-                new Object[]{stage.id, url},
+                new Object[]{stage.id},
                 Locale.JAPANESE);
         lineMessage.multicast(
                 Collections.singleton(userId),
